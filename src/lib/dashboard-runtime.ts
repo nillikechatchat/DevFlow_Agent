@@ -2,7 +2,7 @@ import packageJson from '../../package.json';
 
 const startedAt = Date.now();
 
-export const DASHBOARD_REPOSITORY = 'https://github.com/agentteams-group/agentteams-dashboard';
+export const DASHBOARD_REPOSITORY = 'https://github.com/nillikechatchat/DevFlow_Agent';
 
 export function getDashboardRuntimeInfo() {
   return {

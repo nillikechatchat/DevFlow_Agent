@@ -1,219 +1,79 @@
-<div align="center">
-  <img src="public/agentteams-logo.svg" alt="AgentTeams Logo" width="110" />
+# DevFlow_Agent
 
-  # AgentTeams Dashboard
+DevFlow_Agent 是一套 Spec-First 研发管控系统。它以 AgentTeams 协作模型编排研发角色，并以 `issue-spec` 的可验证交付流程连接 Issue、日志、代码、CI 与 Pull Request，形成可回放、可审计、可沉淀的工程闭环。
 
-  **A lightweight web console for managing AgentTeams clusters — Workers, Teams, Humans, Managers and infrastructure, with integrated Matrix chat.**
+## 解决的问题
 
-  [English](./README.md) | [简体中文](./README.zh-CN.md)
+企业缺陷修复常跨越 Issue、日志、代码和 CI，根因定位高度依赖资深工程师。传统编码 Agent 缺少可信验收过程，经验也难以沉淀为可复用资产。
 
-  [![Build Dashboard Image](https://github.com/agentteams-group/agentteams-dashboard/actions/workflows/build.yml/badge.svg)](https://github.com/agentteams-group/agentteams-dashboard/actions/workflows/build.yml)
-  [![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
-  [![React](https://img.shields.io/badge/React-19-149eca?logo=react)](https://react.dev/)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-  [![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-38bdf8?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
-  [![Docker](https://img.shields.io/badge/Docker-ready-2496ed?logo=docker&logoColor=white)](./Dockerfile)
-</div>
+DevFlow_Agent 将研发过程组织为具备明确输入、产出与验收标准的协作流：每个阶段留下证据，关键动作纳入审批，验证结果决定流程是否闭环。
 
----
+## 核心能力
 
-## ✨ Overview
+| 能力 | 说明 |
+| --- | --- |
+| 多角色协作 | TeamLeader 编排 Triage、Architect、Developer、Reviewer、QA 与 Retro Worker。 |
+| Spec-First 流程 | `issue-spec` 以提案、实施、验证三个阶段驱动交付，约束上下文、产出和验收。 |
+| 可验证验收 | `issue-spec verify` 校验阻塞问题、流程断链、未关闭的 P0/P1 和 PR 检查状态。 |
+| 证据原生沉淀 | Issue、PR 和验证记录共同构成可追溯、可审计、可回放的交付证据。 |
+| 经验资产化 | 经过验证的规范通过 durable spec PR 归档到仓库，持续复用。 |
+| 人在回路 | Worker 保持零凭据运行，高风险动作需要 Human 审批。 |
+| 可视化管控 | Dashboard 提供团队、Worker、基础设施、权限和协作状态的统一操作面。 |
 
-AgentTeams Dashboard is a **Next.js** web UI for visually managing [AgentTeams](https://github.com/agentscope-ai/AgentTeams) cluster resources — Workers, Teams, Humans and Managers — with built-in Matrix chat, topology views and RBAC/audit tooling. It can be deployed standalone or embedded into an existing AgentTeams installation with a one-line install script.
+## 研发闭环
 
-## 🚀 Features
-
-| Module | Description |
-|--------|-------------|
-| **Overview** | Cluster at a glance: active Workers, Teams, Matrix rooms, resource status |
-| **Workers** | Full lifecycle management: view, wake, sleep, ensure-ready, delete |
-| **Teams** | Team management: members, linked Workers/Humans, detail dialogs |
-| **Humans** | Human CRUD: card/table views, permission levels, room association |
-| **Managers** | Manager management: model configuration, welcome messages, team coordination |
-| **K8s** | Kubernetes CRD resource cards with YAML/JSON preview |
-| **Infrastructure** | Infra health: Controller, Matrix and component status |
-| **Chat** | Matrix chat integration: room list, members, rich message rendering (A2UI) |
-| **Security** | Permission matrix, access control and security policy views |
-| **Skills** | Skill / MCP resource management |
-| **Architecture** | Architecture diagram and component relationships |
-
-## 🛠 Tech Stack
-
-- **Framework**: Next.js 16 + React 19 + TypeScript 5
-- **Styling**: Tailwind CSS v4 + shadcn/ui
-- **State**: Zustand + TanStack Query
-- **Runtime**: Node.js 20+
-- **Deployment**: Docker, Next.js standalone output
-
-## 📦 Quick Start
-
-### Install as an AgentTeams component (recommended)
-
-The Dashboard integrates with the [AgentTeams](https://github.com/agentscope-ai/AgentTeams) installer via a patch file under `install/patches/`. When applied to the AgentTeams source tree, the Dashboard becomes an optional step in `agentteams-install.sh` — the interactive installer will prompt whether to install it, and the container is automatically started alongside the Controller/Manager.
-
-- **Default version**: `v1.2.0-beta.1` (configurable via `AGENTTEAMS_DASHBOARD_VERSION`, independent of AgentTeams version)
-- **Default port**: `13000`, bound to `127.0.0.1` (set `AGENTTEAMS_LOCAL_ONLY=0` to expose on `0.0.0.0`)
-- **Available versions**: tagged at https://github.com/agentteams-group/agentteams-dashboard/tags
-- **Integration PR**: https://github.com/agentscope-ai/AgentTeams/pull/1075
-- **Platform**: Linux/macOS (Bash installer) only. PowerShell support is planned.
-
-You can also install the Dashboard standalone against an already-running AgentTeams cluster:
-
-```bash
-# Linux / macOS — standalone install
-bash install/agentteams-dashboard.sh
-
-# Windows — PowerShell install
-install/agentteams-dashboard.ps1
-
-# Uninstall
-bash install/agentteams-dashboard.sh uninstall
+```text
+Issue / 日志 / 代码 / CI
+          |
+          v
+TeamLeader 编排专业 Worker
+          |
+          v
+issue-spec: 提案 -> 实施 -> 验证
+          |
+          v
+Issue 与 PR 证据沉淀
+          |
+          v
+durable spec PR 归档复用
 ```
 
-After installation visit `http://127.0.0.1:13000/`.
+`PROCESS` 以 DAG 方式描述可并行的协作步骤；typed comment 用于在角色之间传递结构化上下文。
 
-#### Integration environment variables
+## 技术基础
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `AGENTTEAMS_DASHBOARD` | Enable Dashboard installation (`1` = install, `0` = skip) | `1` |
-| `AGENTTEAMS_PORT_DASHBOARD` | Host port mapped to the Dashboard container | `13000` |
-| `AGENTTEAMS_DASHBOARD_VERSION` | Dashboard image tag (independent release) | `v1.2.0-beta.1` |
-| `AGENTTEAMS_DASHBOARD_IMAGE` | Full Dashboard image reference | `${AGENTTEAMS_REGISTRY}/agentteams/agentteams-dashboard:${AGENTTEAMS_DASHBOARD_VERSION}` |
-| `AGENTTEAMS_AI_GATEWAY_ADMIN_URL` | Higress Console URL for shared login (explicit config takes priority) | auto-detected |
+- Next.js 16、React 19、TypeScript 5
+- Tailwind CSS 4 与 shadcn/ui
+- Zustand 与 TanStack Query
+- AgentTeams 协作运行时与 Matrix 通信能力
+- Docker 与 Next.js standalone 部署
 
-**Key integration features**:
-- Independent versioning — AgentTeams and Dashboard can release on different schedules
-- Full env persistence — keep-all upgrades preserve all Dashboard settings
-- Explicit URL priority — `AGENTTEAMS_AI_GATEWAY_ADMIN_URL` overrides auto-detection
-- Auto URL normalization — `http://` is prepended if protocol is missing
-- CLI token polling — 30s retry with graceful fallback
-- Legacy HiClaw compatibility — also reads `/var/run/hiclaw/cli-token`
+## 本地启动
 
-Non-interactive install example:
+运行环境需要 Node.js 20 或更高版本。
 
 ```bash
-AGENTTEAMS_DASHBOARD=1 AGENTTEAMS_PORT_DASHBOARD=13000 AGENTTEAMS_DASHBOARD_VERSION=v1.2.0-beta.1 \
-  bash agentteams-install.sh --non-interactive
-```
-
-See [`install/AGENTTEAMS_PATCH.md`](install/AGENTTEAMS_PATCH.md) for detailed integration notes (patch contents, Makefile targets, verification, and roadmap).
-
-### Run standalone
-
-```bash
-# Install dependencies
-npm install
-
-# Configure environment
-cp .env.example .env
-# Edit .env: set AGENTTEAMS_CONTROLLER_URL and NEXT_PUBLIC_MATRIX_API_URL
-
-# Development
+npm ci
 npm run dev
-
-# Production
-npm run build
-npm start
 ```
 
-### Docker
+开发服务默认运行在 `http://localhost:3000`。
 
-```bash
-# Pull and run the pre-built image
-docker run -d -p 13000:3000 \
-  --name agentteams-dashboard \
-  -e AGENTTEAMS_CONTROLLER_URL=http://host.docker.internal:8090 \
-  -e NEXT_PUBLIC_MATRIX_API_URL=http://host.docker.internal:6167 \
-  ghcr.io/agentteams-group/agentteams-dashboard:v1.0.0
+## 常用命令
 
-# Or build from source
-docker build -t ghcr.io/agentteams-group/agentteams-dashboard:v1.0.0 .
-```
+| 命令 | 用途 |
+| --- | --- |
+| `npm run dev` | 启动开发服务 |
+| `npm run build` | 构建生产产物 |
+| `npm start` | 启动生产服务 |
+| `npm run lint` | 执行 ESLint 检查 |
+| `npm run typecheck` | 执行 TypeScript 类型检查 |
+| `npm test` | 执行 Vitest 测试 |
 
-## ⚙️ Configuration
+## 项目定位
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `AGENTTEAMS_CONTROLLER_URL` | AgentTeams Controller endpoint (server-side proxy) | `http://agentteams-controller:8090` |
-| `NEXT_PUBLIC_AGENTTEAMS_CONTROLLER_URL` | Browser-facing Controller URL (optional) | — |
-| `NEXT_PUBLIC_MATRIX_API_URL` | Matrix Homeserver endpoint | — |
-| `MATRIX_HOMESERVER_ALLOWLIST` | Comma-separated homeserver hostnames allowed through the Matrix proxy (exclusive once set) | — |
-| `AGENTTEAMS_AUTH_TOKEN` | Controller auth token | — |
-| `AGENTTEAMS_AUTH_TOKEN_FILE` | Token file path (supports rotation) | — |
-| `DATABASE_URL` | SQLite database path | `file:./db/dashboard.db` |
-| `NEXT_PUBLIC_BASE_PATH` | URL base path (embedded deployment) | `/dashboard` |
+DevFlow_Agent 面向需求交付、缺陷修复和持续改进场景，提供从任务输入到验收归档的研发协作基础能力。Dashboard 是该系统的二开管控面，后续可与团队的 AgentTeams、Nacos 治理和交付流程集成。
 
-## 🏗 Architecture
+## 仓库
 
-The browser never talks to the AgentTeams Controller or the Matrix Homeserver directly — every request goes through the Next.js API route proxy layer:
-
-```
-┌──────────────┐      ┌───────────────────────────┐      ┌────────────────────────┐
-│   Browser    │─────▶│  Next.js API Routes       │─────▶│ AgentTeams Controller  │
-│  (React UI)  │◀─────│  /api/agentteams/*        │◀─────│ (Workers/Teams/...)    │
-└──────────────┘      │  /api/matrix/*            │      └────────────────────────┘
-                      └────────────┬──────────────┘
-                                   │
-                                   ▼
-                      ┌───────────────────────────┐
-                      │   Matrix Homeserver       │
-                      └───────────────────────────┘
-```
-
-- `proxy-helper.ts` handles request forwarding, auth header injection, timeouts and error normalization.
-- **Auth**: in k3s, the Dashboard accesses the Controller with a projected ServiceAccount token. The token is re-read on every request, so short-lived token rotation works out of the box.
-- **Security**: Matrix access tokens are passed from the frontend; the homeserver proxy enforces a strict hostname allowlist and blocks private-network targets (SSRF protection).
-
-## 📁 Project Structure
-
-```
-├── src/
-│   ├── app/
-│   │   ├── api/              # Proxy API routes (agentteams + matrix)
-│   │   ├── globals.css
-│   │   ├── layout.tsx
-│   │   └── page.tsx
-│   ├── components/
-│   │   ├── dashboard/        # Dashboard business components
-│   │   │   └── sections/     # Feature sections
-│   │   ├── ui/               # shadcn/ui primitives
-│   │   ├── auth/             # Login components
-│   │   └── setup/            # Setup wizard
-│   ├── hooks/                # TanStack Query hooks
-│   └── lib/                  # Utilities, API client, stores
-├── install/                  # AgentTeams integration install scripts
-├── public/                   # Static assets
-├── Dockerfile
-├── Makefile                  # Multi-arch Docker build/push
-├── next.config.ts
-├── vitest.config.ts
-└── package.json
-```
-
-## 📜 Scripts
-
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Start the dev server (port 3000) |
-| `npm run build` | Build the standalone production bundle |
-| `npm start` | Start the production server |
-| `npm run lint` | ESLint checks |
-| `npm run typecheck` | TypeScript type checking |
-| `npm test` | Run the vitest test suite |
-
-## 🧪 Quality
-
-- **Unit tests** with vitest + Testing Library (150+ tests, `npm test`)
-- **Lint-clean** ESLint configuration (`npm run lint`)
-- **Type-safe** with strict TypeScript (`npm run typecheck`)
-- **Reproducible builds** via `npm ci` + lockfile and multi-arch Docker images (`make help`)
-
-## 🤝 Related Projects
-
-- [AgentTeams](https://github.com/agentscope-ai/AgentTeams) — multi-agent collaboration runtime
-- [AgentTeams Controller](https://github.com/higress-group/agentteams) — the Controller
-
-## 📄 License
-
-This project belongs to higress-group. Please refer to the license file in the repository root for details.
+https://github.com/nillikechatchat/DevFlow_Agent

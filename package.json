@@ -1,5 +1,5 @@
 {
-  "name": "agentteams-dashboard",
+  "name": "devflow-agent",
   "version": "0.2.0",
   "private": true,
   "scripts": {
