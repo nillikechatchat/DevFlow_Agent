@@ -4,7 +4,7 @@ import {
   evaluateVerifyResult,
   computeVerifyStatus,
   type VerifyResult,
-} from '@/lib/verify-result';
+} from './verify-result.js';
 
 const passingJson = JSON.stringify({
   change: 'issue-123',

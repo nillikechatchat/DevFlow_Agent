@@ -6,11 +6,11 @@ import {
   SKILL_FIELDS,
   parseSkillContract,
   validateSkillContract,
-} from '@/lib/skill-contract';
+} from './skill-contract.js';
 
 const skillsDir = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
-  '../../.agents/skills',
+  '../templates/agents/skills',
 );
 
 const sampleContract = `# triage Skill

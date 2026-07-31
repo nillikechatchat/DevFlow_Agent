@@ -3,7 +3,7 @@ import {
   buildSkillDownloadUrl,
   contentHash,
   SkillRegistry,
-} from '@/lib/skill-registry';
+} from './skill-registry.js';
 
 describe('buildSkillDownloadUrl', () => {
   it('builds a deterministic Nacos URL for a pinned version', () => {

@@ -7,11 +7,11 @@ import {
   validateResource,
   validateWorkerResource,
   type ParsedResource,
-} from '@/lib/resource-contract';
+} from './resource-contract.js';
 
 const examplesDir = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
-  '../../.agents/examples',
+  '../templates/agents/examples',
 );
 
 function loadExample(fileName: string): ParsedResource {

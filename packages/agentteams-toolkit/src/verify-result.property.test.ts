@@ -4,7 +4,7 @@ import {
   computeVerifyStatus,
   evaluateVerifyResult,
   type VerifyGates,
-} from '@/lib/verify-result';
+} from './verify-result.js';
 
 const gatesArbitrary: fc.Arbitrary<VerifyGates> = fc.record({
   blocking_questions: fc.integer({ min: 0, max: 10 }),

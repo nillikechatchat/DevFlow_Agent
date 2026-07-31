@@ -1,0 +1,8 @@
+apiVersion: agentteams.io/v1
+kind: Team
+metadata:
+  name: devflow-team
+spec:
+  members: []
+  workers: [triage-worker, architect-worker, developer-worker, reviewer-worker, qa-worker, retro-worker]
+  humans: [dev-lead]

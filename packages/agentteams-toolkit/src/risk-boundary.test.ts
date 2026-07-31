@@ -4,7 +4,7 @@ import {
   isActionPermitted,
   type ApprovalContext,
   type RiskAction,
-} from '@/lib/risk-boundary';
+} from './risk-boundary.js';
 
 function action(kind: RiskAction['kind'], target = 'example'): RiskAction {
   return { kind, target };

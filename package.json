@@ -2,6 +2,9 @@
   "name": "devflow-agent",
   "version": "0.2.0",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "next dev -p 3000 2>&1 | tee dev.log",
     "build": "next build && cp -r .next/static .next/standalone/.next/ && cp -r public .next/standalone/",
@@ -10,9 +13,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "validate:skills": "node scripts/validate-skills.mjs",
-    "validate:toolkit": "node scripts/toolkit-manifest.mjs",
-    "verify:pipeline": "bash scripts/verify-agentteams-pipeline.sh"
+    "validate:skills": "agentteams-toolkit validate .",
+    "validate:toolkit": "agentteams-toolkit manifest .",
+    "verify:pipeline": "agentteams-toolkit verify-pipeline ."
   },
   "dependencies": {
     "@a2ui/react": "^0.10.1",

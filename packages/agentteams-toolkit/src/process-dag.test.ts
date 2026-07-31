@@ -5,7 +5,7 @@ import {
   isParallelizable,
   assignParallelism,
   type ProcessNode,
-} from '@/lib/process-dag';
+} from './process-dag.js';
 
 function node(overrides: Partial<ProcessNode> & { id: string }): ProcessNode {
   return {

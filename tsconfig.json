@@ -40,6 +40,7 @@
     "node_modules",
     "examples",
     "skills",
+    "packages",
     "vitest.config.ts",
     "vitest.setup.ts"
   ]

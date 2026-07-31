@@ -120,7 +120,9 @@ export function assignParallelism(
   graph: ProcessGraph,
   writeDomains: Record<string, string[]>,
 ): ProcessGraph {
-  const nodes = graph.nodes.map((node) => ({ ...node, parallelWith: [] }));
+  const nodes = graph.nodes.map(
+    (node) => ({ ...node, parallelWith: [] as string[] }),
+  );
   for (let i = 0; i < nodes.length; i++) {
     for (let j = i + 1; j < nodes.length; j++) {
       const first = nodes[i];
