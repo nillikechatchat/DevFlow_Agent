@@ -9,7 +9,10 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "validate:skills": "node scripts/validate-skills.mjs",
+    "validate:toolkit": "node scripts/toolkit-manifest.mjs",
+    "verify:pipeline": "bash scripts/verify-agentteams-pipeline.sh"
   },
   "dependencies": {
     "@a2ui/react": "^0.10.1",
@@ -73,6 +76,7 @@
     "tailwindcss": "^4",
     "tw-animate-css": "^1.3.5",
     "typescript": "^5",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "yaml": "^2.9.0"
   }
 }

@@ -1,0 +1,7 @@
+apiVersion: agentteams.io/v1
+kind: Human
+metadata:
+  name: dev-lead
+spec:
+  permission: high
+  room: "#devflow-project"

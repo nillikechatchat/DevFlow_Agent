@@ -6,6 +6,8 @@ import {
   UserCheck,
   MessageSquare,
   BookOpen,
+  GitPullRequestArrow,
+  ListChecks,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -28,6 +30,8 @@ export const navItems: NavItem[] = [
   { id: 'managers', label: 'Managers', icon: Crown },
   { id: 'humans', label: 'Humans', icon: UserCheck },
   { id: 'chat', label: 'Matrix 聊天', icon: MessageSquare },
+  { id: 'spec', label: 'Spec 工作流', icon: GitPullRequestArrow },
+  { id: 'tasks', label: '变更看板', icon: ListChecks },
   { id: 'docs', label: '文档', icon: BookOpen },
 ];
 

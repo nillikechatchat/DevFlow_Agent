@@ -1,0 +1,9 @@
+apiVersion: agentteams.io/v1
+kind: Manager
+metadata:
+  name: devflow-leader
+spec:
+  runtime: openclaw
+  modelConfig:
+    model: devflow-leader
+    temperature: 0.2

@@ -46,6 +46,8 @@ const ManagersSection = lazy(() => import('./sections/managers-section').then(m 
 const HumansSection = lazy(() => import('./sections/humans-section').then(m => ({ default: m.HumansSection })));
 const ChatSection = lazy(() => import('./sections/chat-section').then(m => ({ default: m.ChatSection })));
 const DocsSection = lazy(() => import('./sections/docs-section').then(m => ({ default: m.DocsSection })));
+const SpecWorkflowSection = lazy(() => import('./sections/spec-workflow-section').then(m => ({ default: m.SpecWorkflowSection })));
+const ChangeBoardSection = lazy(() => import('./sections/change-board-section').then(m => ({ default: m.ChangeBoardSection })));
 
 const sectionMap: Record<string, React.ComponentType> = {
   overview: OverviewSection,
@@ -54,6 +56,8 @@ const sectionMap: Record<string, React.ComponentType> = {
   managers: ManagersSection,
   humans: HumansSection,
   chat: ChatSection,
+  spec: SpecWorkflowSection,
+  tasks: ChangeBoardSection,
   docs: DocsSection,
 };
 

@@ -1,0 +1,14 @@
+apiVersion: agentteams.io/v1
+kind: Worker
+metadata:
+  name: qa-worker
+spec:
+  runtime: openclaw
+  role: qa
+  spec:
+    env:
+      SKILLS_API_URL: nacos://market.agentteams.io:80/public
+  soul: |
+    你是质量保障 Agent，负责 verify 门禁。
+  token:
+    type: consumer

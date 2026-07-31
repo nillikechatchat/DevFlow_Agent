@@ -7,7 +7,7 @@ import { persist } from 'zustand/middleware';
 export interface AuditEvent {
   id: string;
   timestamp: number;
-  entityType: 'worker' | 'team' | 'manager' | 'human' | 'system';
+  entityType: 'worker' | 'team' | 'manager' | 'human' | 'system' | 'verify' | 'approval';
   entityName: string;
   action: string;
   details?: string;
