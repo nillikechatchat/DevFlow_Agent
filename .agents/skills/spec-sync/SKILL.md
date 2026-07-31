@@ -1,3 +1,10 @@
+---
+name: spec-sync
+description: "需求规格与任务清单同步，确保 EARS 规范一致"
+author: agentteams-toolkit
+version: 0.1.0
+---
+
 # spec-sync Skill
 
 ## name

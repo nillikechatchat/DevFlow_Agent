@@ -1,3 +1,10 @@
+---
+name: root-cause
+description: "对失败项进行根因分析，产出证据链与修复建议"
+author: agentteams-toolkit
+version: 0.1.0
+---
+
 # root-cause Skill
 
 ## name

@@ -2,7 +2,21 @@
 
 统一 Skill 契约模板（对应设计 C2 契约完备属性）。
 
-每个 Skill 必须包含 name、role、triggers、inputs、outputs、permissions 六字段。
+每个 Skill 必须包含 name、role、triggers、inputs、outputs、permissions 六字段，文件顶部需带 HiMarket 兼容的 YAML frontmatter 元数据。
+
+## frontmatter（HiMarket 规范）
+
+- 必填：`name`（技能名称，与目录名一致）、`description`（技能描述）
+- 可选：`author`、`version`（语义化版本，如 `0.1.0`）、`repository`
+
+```yaml
+---
+name: triage
+description: "缺陷上报与变更开启的分诊技能"
+author: agentteams-toolkit
+version: 0.1.0
+---
+```
 
 ## name
 

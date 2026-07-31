@@ -1,3 +1,10 @@
+---
+name: triage
+description: "缺陷上报与变更开启的分诊技能，负责判定优先级并创建 Proposal issue"
+author: agentteams-toolkit
+version: 0.1.0
+---
+
 # triage Skill
 
 ## name

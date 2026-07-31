@@ -1,3 +1,10 @@
+---
+name: retro
+description: "迭代回顾，沉淀改进项"
+author: agentteams-toolkit
+version: 0.1.0
+---
+
 # retro Skill
 
 ## name

@@ -1,3 +1,10 @@
+---
+name: implement
+description: "根据需求与设计文档实施代码变更，遵循过程 DAG"
+author: agentteams-toolkit
+version: 0.1.0
+---
+
 # implement Skill
 
 ## name

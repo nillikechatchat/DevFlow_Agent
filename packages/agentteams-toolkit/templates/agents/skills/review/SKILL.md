@@ -1,3 +1,10 @@
+---
+name: review
+description: "对代码与设计变更进行审查，输出审查意见"
+author: agentteams-toolkit
+version: 0.1.0
+---
+
 # review Skill
 
 ## name

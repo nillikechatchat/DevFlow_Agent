@@ -1,3 +1,10 @@
+---
+name: verify
+description: "质量保障门禁，对变更进行验证与归档"
+author: agentteams-toolkit
+version: 0.1.0
+---
+
 # verify Skill
 
 ## name
