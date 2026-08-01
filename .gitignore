@@ -54,3 +54,7 @@ server.log
 /skills/
 # package build output
 packages/*/dist
+
+# issue-spec mock server
+mock-issue-spec-server.js
+mock-issue-spec-server.log
