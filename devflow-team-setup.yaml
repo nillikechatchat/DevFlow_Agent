@@ -1,0 +1,84 @@
+apiVersion: agentteams.io/v1beta1
+kind: Worker
+metadata:
+  name: devflow-leader
+spec:
+  model: qwen3.5-plus
+  runtime: openclaw
+  package: packages/devflow-agent@1.0.0-soul.zip
+---
+apiVersion: agentteams.io/v1beta1
+kind: Worker
+metadata:
+  name: triage-worker
+spec:
+  model: qwen3.5-plus
+  runtime: openclaw
+  package: packages/devflow-agent@1.0.0-soul.zip
+---
+apiVersion: agentteams.io/v1beta1
+kind: Worker
+metadata:
+  name: architect-worker
+spec:
+  model: qwen3.5-plus
+  runtime: openclaw
+  package: packages/devflow-agent@1.0.0-soul.zip
+---
+apiVersion: agentteams.io/v1beta1
+kind: Worker
+metadata:
+  name: developer-worker
+spec:
+  model: qwen3.5-plus
+  runtime: openclaw
+  package: packages/devflow-agent@1.0.0-soul.zip
+---
+apiVersion: agentteams.io/v1beta1
+kind: Worker
+metadata:
+  name: reviewer-worker
+spec:
+  model: qwen3.5-plus
+  runtime: openclaw
+  package: packages/devflow-agent@1.0.0-soul.zip
+---
+apiVersion: agentteams.io/v1beta1
+kind: Worker
+metadata:
+  name: qa-worker
+spec:
+  model: qwen3.5-plus
+  runtime: openclaw
+  package: packages/devflow-agent@1.0.0-soul.zip
+---
+apiVersion: agentteams.io/v1beta1
+kind: Worker
+metadata:
+  name: retro-worker
+spec:
+  model: qwen3.5-plus
+  runtime: openclaw
+  package: packages/devflow-agent@1.0.0-soul.zip
+---
+apiVersion: agentteams.io/v1beta1
+kind: Team
+metadata:
+  name: devflow-team
+spec:
+  description: "DevFlow agent development team with multi-role worker collaboration"
+  workerMembers:
+    - name: devflow-leader
+      role: team_leader
+    - name: triage-worker
+      role: worker
+    - name: architect-worker
+      role: worker
+    - name: developer-worker
+      role: worker
+    - name: reviewer-worker
+      role: worker
+    - name: qa-worker
+      role: worker
+    - name: retro-worker
+      role: worker
