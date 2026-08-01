@@ -115,7 +115,38 @@ export function validateTeamResource(doc: ParsedResource): string[] {
     errors.push('kind 必须为 Team');
   }
   requireString(doc, 'metadata.name', errors);
-  requireArray(doc, 'spec.members', errors);
+
+  const workerMembers = requireArray(doc, 'spec.workerMembers', errors);
+  if (workerMembers) {
+    if (workerMembers.length === 0) {
+      errors.push('spec.workerMembers 不能为空数组');
+    }
+    const leaders = workerMembers.filter(
+      (member) =>
+        typeof member === 'object' &&
+        member !== null &&
+        (member as { role?: unknown }).role === 'team_leader',
+    );
+    if (leaders.length !== 1) {
+      errors.push('spec.workerMembers 必须有且仅有一个 role: team_leader');
+    }
+    workerMembers.forEach((member, index) => {
+      if (typeof member === 'string' && member.trim().length > 0) return;
+      if (typeof member === 'object' && member !== null) {
+        if (!(member as { name?: unknown }).name) {
+          errors.push(`spec.workerMembers[${index}] 缺少 name`);
+        }
+        const role = (member as { role?: unknown }).role;
+        if (role !== undefined && role !== 'team_leader' && role !== 'worker') {
+          errors.push(`spec.workerMembers[${index}].role 必须为 team_leader/worker`);
+        }
+        return;
+      }
+      errors.push(`spec.workerMembers[${index}] 必须为字符串或对象`);
+    });
+    return errors;
+  }
+
   const workers = requireArray(doc, 'spec.workers', errors);
   if (workers && workers.length === 0) {
     errors.push('spec.workers 不能为空数组');

@@ -13,6 +13,7 @@ export interface WorkerPackageOptions {
   version?: string;
   output?: string;
   model?: string;
+  runtime?: string;
   baseImage?: string;
   aptPackages?: string[];
   pipPackages?: string[];
@@ -53,6 +54,7 @@ export function packWorker(
     output: options.output,
     version: options.version,
     model: options.model,
+    runtime: options.runtime,
     baseImage: options.baseImage,
     aptPackages: options.aptPackages,
     pipPackages: options.pipPackages,

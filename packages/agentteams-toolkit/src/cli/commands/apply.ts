@@ -1,6 +1,13 @@
 import { writeFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
-import { readAgentTeamsPackage, buildWorkerCrFromPackage } from '../../agentteams-package.js';
+import {
+  readAgentTeamsPackage,
+  buildWorkerCrFromPackage,
+} from '../../agentteams-package.js';
+import {
+  readProjectPackage,
+  buildTeamSetupFromPackage,
+} from '../../project-package.js';
 
 export interface ApplyOptions {
   name?: string;
@@ -31,13 +38,12 @@ export function applyWorker(zipPath: string, options: ApplyOptions = {}): string
 
 export function runApply(args: string[]): number {
   const kind = args[0];
-  const zipArg = args[1];
   const zipFlagIndex = args.indexOf('--zip');
-  const zipPath = zipArg?.endsWith('.zip') ? zipArg : (zipFlagIndex >= 0 ? args[zipFlagIndex + 1] : undefined);
+  const zipPath = zipFlagIndex >= 0 ? args[zipFlagIndex + 1] : undefined;
 
-  if (kind !== 'worker' || !zipPath) {
+  if ((kind !== 'worker' && kind !== 'project') || !zipPath) {
     console.error(
-      'Usage: agentteams-toolkit apply worker --zip <path> [--name <name>] [--package-uri <uri>] [--inline] [--skills a,b] [--output <path>]',
+      'Usage: agentteams-toolkit apply <worker|project> --zip <path> [options]',
     );
     return 1;
   }
@@ -47,31 +53,62 @@ export function runApply(args: string[]): number {
     return 1;
   }
 
+  const name = readFlag(args, '--name');
+  const packageUri = readFlag(args, '--package-uri');
+  const inline = args.includes('--inline');
+  const skillsRaw = readFlag(args, '--skills');
+  const skills = skillsRaw
+    ? skillsRaw.split(',').map((s) => s.trim()).filter(Boolean)
+    : undefined;
+  const output = readFlag(args, '--output');
+
   try {
-    const pkg = readAgentTeamsPackage(resolved);
-    const nameFlagIndex = args.indexOf('--name');
-    const name = nameFlagIndex >= 0 ? args[nameFlagIndex + 1] : undefined;
-    const uriFlagIndex = args.indexOf('--package-uri');
-    const packageUri = uriFlagIndex >= 0 ? args[uriFlagIndex + 1] : undefined;
-    const inline = args.includes('--inline');
-    const skillsFlagIndex = args.indexOf('--skills');
-    const skills = skillsFlagIndex >= 0
-      ? args[skillsFlagIndex + 1].split(',').map((s) => s.trim()).filter(Boolean)
-      : undefined;
-    const outputFlagIndex = args.indexOf('--output');
-    const output = outputFlagIndex >= 0 ? args[outputFlagIndex + 1] : undefined;
+    if (kind === 'worker') {
+      const pkg = readAgentTeamsPackage(resolved);
+      const crYaml = buildWorkerCrFromPackage(pkg, {
+        name,
+        packageUri,
+        inlineConfig: inline,
+        skills,
+      });
+      const dest = output ?? path.join(process.cwd(), 'worker.yaml');
+      writeFileSync(dest, crYaml, 'utf8');
 
-    const crYaml = buildWorkerCrFromPackage(pkg, { name, packageUri, inlineConfig: inline, skills });
-    const dest = output ?? path.join(process.cwd(), 'worker.yaml');
-    writeFileSync(dest, crYaml, 'utf8');
+      const crName = name ?? pkg.manifest.worker.suggested_name;
+      console.log(`PASS: Worker CR written to ${dest}`);
+      console.log(
+        `  worker: ${crName} (model: ${pkg.manifest.worker.model}, runtime: ${pkg.manifest.worker.runtime})`,
+      );
+      console.log('  使用 agentteams-apply.sh 应用资源:');
+      console.log(`    bash install/agentteams-apply.sh -f ${dest}`);
+      console.log('  或直接导入工具包创建 Worker:');
+      console.log(
+        `    bash install/agentteams-import.sh worker --name ${crName} --zip ${resolved}`,
+      );
+      return 0;
+    }
 
-    const crName = name ?? pkg.manifest.worker.suggested_name;
-    console.log(`PASS: Worker CR written to ${dest}`);
-    console.log(`  worker: ${crName} (model: ${pkg.manifest.worker.model}, runtime: ${pkg.manifest.worker.runtime})`);
-    console.log('  使用 agentteams-apply.sh 应用资源:');
+    const pkg = readProjectPackage(resolved);
+    const setupYaml = buildTeamSetupFromPackage(pkg, {
+      packageUri,
+      inlineConfig: inline,
+    });
+    const dest =
+      output ?? path.join(process.cwd(), `${pkg.manifest.team!.name}-setup.yaml`);
+    writeFileSync(dest, setupYaml, 'utf8');
+
+    const team = pkg.manifest.team!;
+    const leader = team.workers.find((w) => w.role === 'team_leader')?.name;
+    console.log(`PASS: team setup written to ${dest}`);
+    console.log(
+      `  team: ${team.name} (leader: ${leader ?? '-'}, workers: ${team.workers.length})`,
+    );
+    console.log('  使用 agentteams-apply.sh 批量创建团队（Worker CR 按序应用，Team 最后）:');
     console.log(`    bash install/agentteams-apply.sh -f ${dest}`);
-    console.log('  或直接导入工具包创建 Worker:');
-    console.log(`    bash install/agentteams-import.sh worker --name ${crName} --zip ${resolved}`);
+    console.log('  或在 Worker 工具包导入后逐一创建:');
+    console.log(
+      `    bash install/agentteams-import.sh worker --name <worker> --zip ${resolved}`,
+    );
     return 0;
   } catch (error) {
     console.error(`FAIL: ${String(error)}`);
@@ -79,19 +116,27 @@ export function runApply(args: string[]): number {
   }
 }
 
+function readFlag(args: string[], name: string): string | undefined {
+  const index = args.indexOf(name);
+  return index >= 0 ? args[index + 1] : undefined;
+}
+
 export function runApplyHelp(): string {
   return [
     'Usage:',
     '  agentteams-toolkit apply worker --zip <path> [options]',
+    '  agentteams-toolkit apply project --zip <path> [options]',
     '',
-    'Read an AgentTeams native worker package ZIP and generate a Worker custom resource.',
-    'The Controller creates the Worker (container + Matrix account + MinIO) when the resource is applied.',
+    'worker:  Read an AgentTeams native worker package ZIP and generate a Worker custom resource.',
+    'project: Read a project soul package ZIP and generate the full team setup (multi-doc YAML:',
+    '         one Worker CR per blueprint worker + one Team CR). The Controller creates every',
+    '         Worker (container + Matrix account + MinIO) and links the Team when applied.',
     '',
     'Options:',
-    '  --name <name>        Override the Worker name (default: manifest.worker.suggested_name)',
+    '  --name <name>        Override the Worker name (worker only)',
     '  --package-uri <uri>  Set spec.package (file://, http(s)://, nacos:// or packages/<name>.zip)',
-    '  --inline             Inline package SOUL.md/AGENTS.md into the Worker CR (overrides package files)',
+    '  --inline             Inline package SOUL.md/AGENTS.md into Worker CRs (overrides package files)',
     '  --skills <a,b>       Built-in skills to enable (merged with package custom skills)',
-    '  --output <path>      Output YAML path (default: ./worker.yaml)',
+    '  --output <path>      Output YAML path',
   ].join('\n');
 }

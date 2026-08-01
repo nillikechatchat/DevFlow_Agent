@@ -281,6 +281,59 @@ triage
     expect(runApply(['worker', '--zip', zipPath])).toBe(1);
   });
 
+  it('pack project produces a project soul package with team blueprint', () => {
+    const root = makeTempDir();
+    const projectDir = path.join(root, 'project');
+    mkdirSync(path.join(projectDir, '.agents', 'examples'), { recursive: true });
+    mkdirSync(path.join(projectDir, '.agents', 'skills', 'triage'), { recursive: true });
+    mkdirSync(path.join(projectDir, 'docs', 'contracts'), { recursive: true });
+    writeFileSync(
+      path.join(projectDir, '.agents', 'examples', 'team.yaml'),
+      'apiVersion: agentteams.io/v1beta1\nkind: Team\nmetadata:\n  name: devflow-team\nspec:\n  description: Test team\n  workerMembers:\n    - name: devflow-leader\n      role: team_leader\n    - name: qa-worker\n      role: worker\n',
+    );
+    writeFileSync(
+      path.join(projectDir, '.agents', 'skills', 'triage', 'SKILL.md'),
+      '# triage\n',
+    );
+    writeFileSync(
+      path.join(projectDir, 'docs', 'contracts', 'process-dag.md'),
+      '# PROCESS DAG\n',
+    );
+
+    const output = path.join(root, 'soul.zip');
+    expect(runPack(['project', projectDir, '--output', output])).toBe(0);
+    expect(existsSync(output)).toBe(true);
+
+    const zip = new AdmZip(output);
+    const names = zip.getEntries().map((entry) => entry.entryName).sort();
+    expect(names).toContain('manifest.json');
+    expect(names).toContain('skills/triage/SKILL.md');
+    expect(names).toContain('contracts/process-dag.md');
+    expect(zip.readAsText('manifest.json')).toContain('devflow-team');
+  });
+
+  it('apply project --zip generates multi-doc team setup YAML', () => {
+    const root = makeTempDir();
+    const projectDir = path.join(root, 'project');
+    mkdirSync(path.join(projectDir, '.agents', 'examples'), { recursive: true });
+    writeFileSync(
+      path.join(projectDir, '.agents', 'examples', 'team.yaml'),
+      'apiVersion: agentteams.io/v1beta1\nkind: Team\nmetadata:\n  name: devflow-team\nspec:\n  workerMembers:\n    - name: devflow-leader\n      role: team_leader\n    - name: qa-worker\n      role: worker\n',
+    );
+
+    const zipPath = path.join(root, 'soul.zip');
+    expect(runPack(['project', projectDir, '--output', zipPath])).toBe(0);
+
+    const output = path.join(root, 'team-setup.yaml');
+    expect(runApply(['project', '--zip', zipPath, '--output', output])).toBe(0);
+    expect(existsSync(output)).toBe(true);
+    const setup = readFileSync(output, 'utf8');
+    expect((setup.match(/^kind: Worker$/gm) ?? []).length).toBe(2);
+    expect((setup.match(/^kind: Team$/gm) ?? []).length).toBe(1);
+    expect(setup).toContain('name: devflow-team');
+    expect(setup).toContain('role: team_leader');
+  });
+
   it('install skill from a local ZIP writes SKILL.md to target', () => {
     const root = makeTempDir();
     const skillDir = path.join(root, 'triage');

@@ -1,8 +1,21 @@
-apiVersion: agentteams.io/v1
+apiVersion: agentteams.io/v1beta1
 kind: Team
 metadata:
   name: devflow-team
 spec:
-  members: []
-  workers: [triage-worker, architect-worker, developer-worker, reviewer-worker, qa-worker, retro-worker]
-  humans: [dev-lead]
+  description: DevFlow agent development team with multi-role worker collaboration
+  workerMembers:
+    - name: devflow-leader
+      role: team_leader
+    - name: triage-worker
+      role: worker
+    - name: architect-worker
+      role: worker
+    - name: developer-worker
+      role: worker
+    - name: reviewer-worker
+      role: worker
+    - name: qa-worker
+      role: worker
+    - name: retro-worker
+      role: worker

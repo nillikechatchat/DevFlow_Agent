@@ -5,4 +5,5 @@ export * from './skill-contract.js';
 export * from './skill-registry.js';
 export * from './skill-package.js';
 export * from './worker-package.js';
+export * from './project-package.js';
 export * from './verify-result.js';

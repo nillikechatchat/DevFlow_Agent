@@ -39,14 +39,27 @@ spec:
 ## Team
 
 ```yaml
-apiVersion: agentteams.io/v1
+apiVersion: agentteams.io/v1beta1
 kind: Team
 metadata:
   name: devflow-team
 spec:
-  members: []
-  workers: [triage-worker, architect-worker, developer-worker, reviewer-worker, qa-worker, retro-worker]
-  humans: [dev-lead]
+  description: DevFlow agent development team
+  workerMembers:
+    - name: devflow-leader
+      role: team_leader
+    - name: triage-worker
+      role: worker
+    - name: architect-worker
+      role: worker
+    - name: developer-worker
+      role: worker
+    - name: reviewer-worker
+      role: worker
+    - name: qa-worker
+      role: worker
+    - name: retro-worker
+      role: worker
 ```
 
 字段说明：
@@ -54,9 +67,10 @@ spec:
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
 | name | string | 研发闭环名称 |
-| members | string[] | 成员列表 |
-| workers | string[] | 关联 Worker |
-| humans | string[] | 关联 Human |
+| description | string | 团队描述（可选） |
+| workerMembers | object[] | 成员列表，`name` 必填，`role` 取 `team_leader`/`worker`，恰好一个 `team_leader` |
+
+兼容 v1 字段 `workers`（string[]）与 `humans`（string[]）：v1 列表缺 leader 时由 `pack project` 自动补充 `<team>-leader`。
 
 ## Human
 

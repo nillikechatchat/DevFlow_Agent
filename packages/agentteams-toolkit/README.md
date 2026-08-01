@@ -101,6 +101,23 @@ agentteams-toolkit install worker qa-worker --version 1.0.0
 
 `spec.package` 支持 `file://`、`http(s)://`、`nacos://` 与 `packages/{name}.zip` 四种 URI；包内 `worker.runtime` 会被 `agt apply worker --zip` 采纳。工具包与 `spec.soul`/`spec.agents` 内联配置可共存——内联字段覆盖工具包内同名文件。
 
+## 项目灵魂包
+
+项目灵魂包把整个项目的灵魂打包成一个 ZIP：团队蓝图（`team.yaml`）+ 全部技能（`.agents/skills/`）+ 契约（`docs/contracts/` 与 `contracts/`）+ 项目级 `config/SOUL.md`/`config/AGENTS.md`。AgentTeams 拿到包后一次性创建团队，leader + 多角色 worker 协作。
+
+```bash
+# 打包项目灵魂包（自动探测 .agents/examples/team.yaml 团队蓝图）
+agentteams-toolkit pack project ./ --version 1.0.0
+# 产物：devflow@1.0-soul.zip
+# 内容：manifest.json（project/team 蓝图）+ config/ + skills/ + contracts/ + docs/contracts/
+
+# 从灵魂包生成批量 setup（每个 worker 一个 Worker CR + 末尾一个 Team CR，均 spec.package 指向同一工具包）
+agentteams-toolkit apply project --zip ./devflow@1.0-soul.zip --package-uri packages/devflow@1.0-soul.zip
+# 产物：./devflow-team-setup.yaml，再用 bash install/agentteams-apply.sh -f devflow-team-setup.yaml 应用
+```
+
+`team.yaml` 使用 AgentTeams v1beta1 Team 资源，`workerMembers` 恰好一个 `role: team_leader`、其余 `role: worker`；也兼容 v1 字符串列表 `workers: [a, b]`（缺 leader 时自动补 `<team>-leader`）。`pack project` 支持 `--model` / `--runtime` 整体覆盖所有 worker 蓝图，`apply project` 支持 `--inline` 内联 `config/SOUL.md` 到每个 Worker CR。
+
 ## 库 API
 
 ```ts
@@ -132,6 +149,7 @@ import {
 - `skill-registry`：Nacos 技能注册表客户端（构建下载 URL、内容哈希、灰度）
 - `skill-package`：Skill 包 frontmatter 解析与 ZIP 打包
 - `agentteams-package`：AgentTeams 原生工具包（manifest.json 构建、ZIP 打包、包读取、Worker CR 生成、包校验）
+- `project-package`：项目灵魂包（团队蓝图解析、灵魂包打包、多 Worker + Team 批量 setup 生成、包校验）
 - `worker-package`：Worker 工具包兼容层（`packWorker` / `readWorkerConfig`，委托 `agentteams-package`）
 - `verify-result`：verify 门禁与结果解析
 

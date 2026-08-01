@@ -105,7 +105,7 @@ export function serializeAgentTeamsManifest(manifest: AgentTeamsManifest): strin
 
 export function manifestFromWorkerYaml(
   doc: WorkerYaml,
-  options: { model?: string; baseImage?: string; aptPackages?: string[]; pipPackages?: string[]; npmPackages?: string[] } = {},
+  options: { model?: string; runtime?: string; baseImage?: string; aptPackages?: string[]; pipPackages?: string[]; npmPackages?: string[] } = {},
 ): AgentTeamsManifest {
   const name = doc?.metadata?.name;
   if (!name || typeof name !== 'string') {
@@ -115,7 +115,7 @@ export function manifestFromWorkerYaml(
   if (!model || typeof model !== 'string') {
     throw new Error(`worker.yaml 缺少 spec.model（或用 --model 指定）`);
   }
-  const runtime = doc?.spec?.runtime ?? 'openclaw';
+  const runtime = options.runtime ?? doc?.spec?.runtime ?? 'openclaw';
   if (!(AGENTTEAMS_RUNTIMES as readonly string[]).includes(runtime as string)) {
     throw new Error(`spec.runtime 必须为 ${AGENTTEAMS_RUNTIMES.join('/')}`);
   }
@@ -145,6 +145,7 @@ export interface AgentTeamsPackageOptions {
   output?: string;
   version?: string;
   model?: string;
+  runtime?: string;
   baseImage?: string;
   aptPackages?: string[];
   pipPackages?: string[];
@@ -193,8 +194,7 @@ export function packAgentTeamsWorker(
 ): PackedAgentTeamsWorker {
   const { configPath, doc } = readWorkerYaml(workerDir);
   const root = path.dirname(configPath);
-  const manifest = manifestFromWorkerYaml(doc, options);
-  const name = manifest.worker.suggested_name;
+  const manifest = manifestFromWorkerYaml(doc, options);  const name = manifest.worker.suggested_name;
   const version = options.version ?? manifest.version;
   manifest.version = version;
   const output =
