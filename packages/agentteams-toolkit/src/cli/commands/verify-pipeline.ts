@@ -79,11 +79,15 @@ export async function verifyPipeline(rootDir: string): Promise<PipelineReport> {
   const workerPath = path.join(rootDir, '.agents', 'examples', 'worker.yaml');
   if (existsSync(workerPath)) {
     const content = readFileSync(workerPath, 'utf8');
-    if (content.includes('token:') && content.includes('type: consumer')) {
-      console.log('  [PASS] Worker CR declares consumer token only');
+    const hasModel = /spec:\s*\n\s*model:/.test(content);
+    const tokenOk =
+      !content.includes('token:') ||
+      (content.includes('token:') && content.includes('type: consumer'));
+    if (hasModel && tokenOk) {
+      console.log('  [PASS] Worker CR declares model (and consumer token only)');
       report.passed += 1;
     } else {
-      console.log('  [FAIL] Worker CR does not declare a consumer token');
+      console.log('  [FAIL] Worker CR must declare spec.model (v1beta1)');
       report.failed += 1;
     }
   } else {

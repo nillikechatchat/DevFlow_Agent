@@ -101,9 +101,10 @@ export function installSkillFromZip(
   return baseDir;
 }
 
-export function himarketInstallHint(workerName: string, version?: string): string {  return version
-    ? `himarket install worker ${workerName} --version ${version}`
-    : `himarket install worker ${workerName}`;
+export function agentteamsImportHint(workerName: string, packageUri?: string): string {
+  return packageUri
+    ? `bash install/agentteams-import.sh worker --name ${workerName} --zip ${packageUri}`
+    : `bash install/agentteams-import.sh worker --name ${workerName}`;
 }
 
 export async function installWorker(
@@ -119,8 +120,8 @@ export async function installWorker(
   const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
   if (!res.ok) {
     throw new Error(
-      `拉取 Worker 失败: HTTP ${res.status} ${url}\n` +
-        `请确认已配置 HiMarket 服务地址与认证信息。安装命令参考: ${himarketInstallHint(workerName, version === 'latest' ? undefined : version)}`,
+      `拉取 Worker 包失败: HTTP ${res.status} ${url}\n` +
+        `请确认注册表地址与认证信息。也可直接从本地工具包导入: ${agentteamsImportHint(workerName, './worker.zip')}`,
     );
   }
   const buffer = Buffer.from(await res.arrayBuffer());

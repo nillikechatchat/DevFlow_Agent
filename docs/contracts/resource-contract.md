@@ -5,20 +5,21 @@
 ## Worker
 
 ```yaml
-apiVersion: agentteams.io/v1
+apiVersion: agentteams.io/v1beta1
 kind: Worker
 metadata:
   name: qa-worker
 spec:
+  model: qwen3.5-plus
   runtime: openclaw
-  role: qa
-  spec:
-    env:
-      SKILLS_API_URL: nacos://market.agentteams.io:80/public
   soul: |
     你是质量保障 Agent，负责 verify 门禁。
-  token:
-    type: consumer
+  agents: |
+    - 严格执行 verify 流程
+    - 发现回归时立即上报
+  skills:
+    - verify
+    - retro
 ```
 
 字段说明：
@@ -26,11 +27,14 @@ spec:
 | 字段 | 类型 | 说明 |
 | --- | --- | --- |
 | name | string | 角色唯一标识 |
-| runtime | string | openclaw / copaw / hermes |
-| role | string | triage / architect / developer / reviewer / qa / retro |
-| spec.env | map | 注入运行环境变量 |
-| soul | string | 可选 SOUL.md 设定人格 |
-| token.type | string | 恒为 consumer，仅消费令牌，无真实凭据 |
+| model | string | LLM 模型 ID（必填，如 `qwen3.5-plus`） |
+| runtime | string | openclaw / copaw / hermes，默认 openclaw |
+| role | string | 可选，triage / architect / developer / reviewer / qa / retro（v1 兼容） |
+| soul | string | 可选 SOUL.md 设定人格，打包为 config/SOUL.md |
+| agents | string | 可选 AGENTS.md 行为规则，打包为 config/AGENTS.md |
+| skills | []string | 平台内置技能（自定义技能走 spec.package 的 skills/） |
+| package | string | 可选工具包 URI（file://、http(s)://、nacos://、packages/{name}.zip） |
+| token.type | string | v1 兼容，恒为 consumer，仅消费令牌，无真实凭据 |
 
 ## Team
 

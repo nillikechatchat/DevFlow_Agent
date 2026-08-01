@@ -3,18 +3,23 @@ import path from 'node:path';
 import { packSkill } from '../../skill-package.js';
 import { packWorker } from '../../worker-package.js';
 
+function readFlag(args: string[], name: string): string | undefined {
+  const index = args.indexOf(name);
+  return index >= 0 ? args[index + 1] : undefined;
+}
+
 export function runPack(args: string[]): number {
   const kind = args[0];
   const dirArg = args[1];
-  const versionFlagIndex = args.indexOf('--version');
-  const version = versionFlagIndex >= 0 ? args[versionFlagIndex + 1] : undefined;
-  const outputFlagIndex = args.indexOf('--output');
-  const output = outputFlagIndex >= 0 ? args[outputFlagIndex + 1] : undefined;
+  const version = readFlag(args, '--version');
+  const output = readFlag(args, '--output');
   const target = dirArg ?? '.';
   const resolved = path.resolve(target);
 
   if (kind !== 'skill' && kind !== 'worker') {
-    console.error('Usage: agentteams-toolkit pack <skill|worker> <dir> [--version <semver>] [--output <path>]');
+    console.error(
+      'Usage: agentteams-toolkit pack <skill|worker> <dir> [--version <semver>] [--output <path>] [--model <model-id>]',
+    );
     return 1;
   }
   if (!existsSync(resolved) || !statSync(resolved).isDirectory()) {

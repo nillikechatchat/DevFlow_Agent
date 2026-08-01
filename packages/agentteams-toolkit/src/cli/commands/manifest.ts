@@ -54,12 +54,17 @@ export function validateManifest(rootDir: string): boolean {
     try {
       const doc = parse(readFileSync(filePath, 'utf8'));
       if (example === 'worker.yaml') {
-        const tokenType = doc?.spec?.token?.type;
+        const tokenType = (doc?.spec as Record<string, unknown> | undefined)?.token as
+          | { type?: unknown }
+          | undefined;
+        const model = (doc?.spec as Record<string, unknown> | undefined)?.model;
+        const hasModel = typeof model === 'string' && model.trim().length > 0;
+        const tokenOk = tokenType === undefined || tokenType.type === 'consumer';
         check(
           checker,
-          tokenType === 'consumer',
+          hasModel && tokenOk,
           example,
-          `token.type=${String(tokenType)}`,
+          hasModel ? `model=${String(model)}` : 'missing spec.model',
         );
       } else {
         check(checker, doc && typeof doc === 'object', example, 'parsable');

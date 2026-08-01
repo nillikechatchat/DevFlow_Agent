@@ -1,6 +1,6 @@
 # agentteams-toolkit
 
-自包含的 agentteams 工具包：资源契约校验、PROCESS DAG、风险边界、技能注册与流水线校验，并按 [HiMarket](https://higress.ai/docs/himarket/) 包规范提供 Skill / Worker 的打包与安装。库 API 与 CLI 双出口，可安装到任意 agentteams 项目使用。
+自包含的 agentteams 工具包：资源契约校验、PROCESS DAG、风险边界、技能注册与流水线校验，并按 [AgentTeams 原生工具包规范](https://github.com/agentscope-ai/AgentTeams) 提供 Worker 工具包的打包、导入与 Worker CR 生成。库 API 与 CLI 双出口，可安装到任意 agentteams 项目使用。
 
 ## 安装
 
@@ -13,7 +13,7 @@ npm install git+https://github.com/<org>/<repo>.git#<ref>
 ## CLI
 
 ```bash
-# 校验项目 .agents/skills 是否符合技能契约（含 HiMarket frontmatter 元数据）
+# 校验项目 .agents/skills 是否符合技能契约（含 frontmatter 元数据）
 agentteams-toolkit validate ./path/to/project
 
 # 校验 toolkit 产物完整性与引用完整性（skills/contracts/examples）
@@ -25,19 +25,24 @@ agentteams-toolkit verify-pipeline ./path/to/project
 # 从内置模板脚手架 .agents 目录
 agentteams-toolkit init ./new-project
 
-# 将 skill 目录打包为 HiMarket ZIP（SKILL.md 根目录或一级子目录，可选 scripts/prompts/config/assets）
+# 将 skill 目录打包为 ZIP（SKILL.md 根目录或一级子目录，可选 scripts/prompts/config/assets）
 agentteams-toolkit pack skill ./skills/my-skill --version 1.0.0
 
-# 将 worker 目录打包为 HiMarket ZIP（worker.yaml 主配置 + README + 内置 skills）
-agentteams-toolkit pack worker ./workers/qa-worker --version 1.0.0
+# 将 worker 目录打包为 AgentTeams 原生工具包 ZIP
+# 产物结构：manifest.json + config/{SOUL,AGENTS,MEMORY}.md + skills/（可含 Dockerfile、crons/）
+# worker.yaml 需声明 metadata.name 与 spec.model；spec.soul/spec.agents 会生成 config/SOUL.md、config/AGENTS.md
+agentteams-toolkit pack worker ./workers/qa-worker --version 1.0.0 --model qwen3.5-plus
 
-# 从注册表安装 skill（claw skill install 语义，Nacos 拉取）
+# 从工具包 ZIP 生成 Worker CR（对齐 agt apply worker --zip 语义，Controller 自动创建 Worker）
+agentteams-toolkit apply worker --zip ./qa-worker@1.0.0.zip --package-uri packages/qa-worker@1.0.0.zip
+
+# 从注册表安装 skill（Nacos 拉取）
 agentteams-toolkit install skill my-skill --registry nacos://market.agentteams.io:80/public
 
 # 从本地 ZIP 安装 skill
 agentteams-toolkit install skill ./my-skill@1.0.0.zip --dir .agents/skills
 
-# 从注册表安装 worker（himarket install worker 语义）
+# 从注册表拉取 worker 工具包
 agentteams-toolkit install worker qa-worker --version 1.0.0
 ```
 
@@ -48,13 +53,53 @@ agentteams-toolkit install worker qa-worker --version 1.0.0
 - `AGENTTEAMS_SKILLS_API_URL`：注册表 URL，默认 `nacos://market.agentteams.io:80/public`
 - `AGENTTEAMS_VERIFY_REMOTE=1`：在 verify-pipeline 中启用 HTTP 可达性探测
 
-## HiMarket 包规范对齐
+## AgentTeams 原生工具包
 
-参考 [HiMarket Skills 市场](https://higress.ai/docs/himarket/himarket-skills/) 与 [Worker 管理](https://higress.ai/docs/himarket/himarket-workers/)：
+参考 AgentTeams 官方 [声明式资源管理](https://github.com/agentscope-ai/AgentTeams) 文档，Worker 工具包是 Controller 通过 `spec.package` 消费的 ZIP，目录结构固定：
 
-- **Skill 包**：ZIP 格式，`SKILL.md` 必须位于根目录或一级子目录；文件顶部 YAML frontmatter 必填 `name` / `description`，可选 `author` / `version` / `repository`；可含 `scripts/`、`prompts/`、`config/`、`assets/`。`pack skill` 生成 `{name}@{version}.zip`，`validate` 校验 frontmatter。
-- **Worker 包**：ZIP 格式，必须包含 `worker.yaml` 主配置（定义 `name` / `version` 与依赖 `skills`），建议含 `README.md` 说明文档，可含内置 `skills/` 目录。`pack worker` 生成 `{name}@{version}.zip`。
-- **CLI 安装语义**：skill 安装对齐 `npx @anthropic-ai/claw skill install --nacos-host ... --nacos-port ... --namespace ... --skill-name ...`（即通过 Nacos 拉取）；worker 安装对齐 `himarket install worker <name> [--version <ver>]`。
+```
+{package}/
+├── manifest.json           # 包元数据（必需）
+├── Dockerfile              # 自定义镜像构建（可选）
+├── config/
+│   ├── SOUL.md             # Worker 身份与角色定义
+│   ├── AGENTS.md           # Agent 行为规则
+│   ├── MEMORY.md           # 长期记忆
+│   └── memory/             # 记忆文件目录
+├── skills/                 # 自定义技能
+│   └── <skill-name>/
+│       └── SKILL.md
+└── crons/
+    └── jobs.json           # 定时任务
+```
+
+`manifest.json` 结构（`worker.suggested_name` / `worker.model` / `worker.runtime` 必填）：
+
+```json
+{
+  "version": "1.0",
+  "source": { "created_at": "2026-03-18T10:00:00Z" },
+  "worker": {
+    "suggested_name": "qa-worker",
+    "model": "qwen3.5-plus",
+    "runtime": "openclaw",
+    "base_image": "agentteams/worker-agent:latest",
+    "apt_packages": ["ffmpeg"],
+    "pip_packages": [],
+    "npm_packages": []
+  }
+}
+```
+
+### 通过导入工具包自动创建 Worker
+
+1. **打包**：`agentteams-toolkit pack worker ./workers/qa-worker` 从 `worker.yaml` 生成 AgentTeams 原生工具包 ZIP（`worker.yaml` 的 `soul` / `agents` 字段自动落盘为 `config/SOUL.md` / `config/AGENTS.md`）。
+2. **导入**：三选一
+   - `agentteams-toolkit apply worker --zip ./qa-worker@1.0.0.zip --package-uri packages/qa-worker@1.0.0.zip` 生成 Worker CR（`spec.package` 指向已上传工具包），再用 `bash install/agentteams-apply.sh -f worker.yaml` 应用，Controller 解析 `spec.package` 自动创建 Worker（容器 + Matrix 账号 + MinIO 空间）；
+   - `bash install/agentteams-import.sh worker --name qa-worker --zip ./qa-worker@1.0.0.zip` 直接从 ZIP 导入；
+   - 通过 `POST /api/v1/packages` 上传后，`spec.package` 使用 `packages/{name}.zip`。
+
+`spec.package` 支持 `file://`、`http(s)://`、`nacos://` 与 `packages/{name}.zip` 四种 URI；包内 `worker.runtime` 会被 `agt apply worker --zip` 采纳。工具包与 `spec.soul`/`spec.agents` 内联配置可共存——内联字段覆盖工具包内同名文件。
 
 ## 库 API
 
@@ -70,6 +115,10 @@ import {
   parseSkillFrontmatter,
   packSkill,
   packWorker,
+  packAgentTeamsWorker,
+  readAgentTeamsPackage,
+  buildWorkerCrFromPackage,
+  validateAgentTeamsPackage,
   computeVerifyStatus,
 } from 'agentteams-toolkit';
 ```
@@ -81,8 +130,9 @@ import {
 - `risk-boundary`：L0-L3 风险分级与动作权限判定
 - `skill-contract`：SKILL.md 字段契约解析与校验
 - `skill-registry`：Nacos 技能注册表客户端（构建下载 URL、内容哈希、灰度）
-- `skill-package`：HiMarket Skill 包 frontmatter 解析与 ZIP 打包
-- `worker-package`：HiMarket Worker 包主配置解析与 ZIP 打包
+- `skill-package`：Skill 包 frontmatter 解析与 ZIP 打包
+- `agentteams-package`：AgentTeams 原生工具包（manifest.json 构建、ZIP 打包、包读取、Worker CR 生成、包校验）
+- `worker-package`：Worker 工具包兼容层（`packWorker` / `readWorkerConfig`，委托 `agentteams-package`）
 - `verify-result`：verify 门禁与结果解析
 
 ## 模板

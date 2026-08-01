@@ -37,20 +37,25 @@ describe('parseResourceYaml', () => {
 });
 
 describe('validateWorkerResource', () => {
-  it('accepts the shipped worker.yaml with consumer token', () => {
+  it('accepts the shipped worker.yaml (AgentTeams v1beta1)', () => {
     const doc = loadExample('worker.yaml');
     expect(validateWorkerResource(doc)).toEqual([]);
   });
 
   it('rejects a token type other than consumer', () => {
     const doc = loadExample('worker.yaml') as Record<string, unknown>;
-    const spec = (doc.spec as Record<string, unknown>).token as Record<
-      string,
-      unknown
-    >;
-    spec.type = 'github-pat';
+    const spec = doc.spec as Record<string, unknown>;
+    spec.token = { type: 'github-pat' };
     expect(validateWorkerResource(doc as ParsedResource)).toContain(
       'spec.token.type 必须为 consumer',
+    );
+  });
+
+  it('rejects a missing spec.model', () => {
+    const doc = loadExample('worker.yaml');
+    delete (doc.spec as Record<string, unknown>).model;
+    expect(validateWorkerResource(doc)).toContain(
+      '缺少字段 spec.model（AgentTeams v1beta1 必填）',
     );
   });
 
@@ -88,12 +93,10 @@ describe('shipped example resources', () => {
     expect(validateResource(kind as never, doc)).toEqual([]);
   });
 
-  it('ensures every shipped Worker holds only a consumer token', () => {
+  it('ensures every shipped Worker declares a model', () => {
     const doc = loadExample('worker.yaml');
-    const token = (doc.spec as Record<string, unknown>).token as Record<
-      string,
-      unknown
-    >;
-    expect(token.type).toBe('consumer');
+    const model = (doc.spec as Record<string, unknown>).model;
+    expect(typeof model).toBe('string');
+    expect((model as string).length).toBeGreaterThan(0);
   });
 });

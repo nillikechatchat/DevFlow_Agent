@@ -78,17 +78,31 @@ export function validateWorkerResource(doc: ParsedResource): string[] {
   }
   requireString(doc, 'metadata.name', errors);
 
+  const hasModel =
+    typeof doc.spec?.model === 'string' && doc.spec.model.trim().length > 0;
+  if (!hasModel) {
+    errors.push('缺少字段 spec.model（AgentTeams v1beta1 必填）');
+  }
+
   const runtime = requireString(doc, 'spec.runtime', errors);
   if (runtime && !(WORKER_RUNTIMES as readonly string[]).includes(runtime)) {
     errors.push(`spec.runtime 必须为 ${WORKER_RUNTIMES.join('/')}`);
   }
 
-  const role = requireString(doc, 'spec.role', errors);
+  const role = typeof doc.spec?.role === 'string' ? doc.spec.role : undefined;
+  if (role && role.trim().length === 0) {
+    errors.push('字段 spec.role 必须为非空字符串');
+  }
   if (role && !(WORKER_ROLES as readonly string[]).includes(role)) {
     errors.push(`spec.role 必须为 ${WORKER_ROLES.join('/')}`);
   }
 
-  const tokenType = requireString(doc, 'spec.token.type', errors);
+  const tokenType =
+    typeof doc.spec?.token === 'object' &&
+    doc.spec.token !== null &&
+    typeof (doc.spec.token as { type?: unknown }).type === 'string'
+      ? (doc.spec.token as { type: string }).type
+      : undefined;
   if (tokenType && tokenType !== 'consumer') {
     errors.push('spec.token.type 必须为 consumer');
   }

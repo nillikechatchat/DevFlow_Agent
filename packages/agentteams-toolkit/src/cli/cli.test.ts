@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -8,6 +8,7 @@ import { validateManifest } from './commands/manifest.js';
 import { verifyPipeline } from './commands/verify-pipeline.js';
 import { runInit } from './commands/init.js';
 import { runPack } from './commands/pack.js';
+import { runApply } from './commands/apply.js';
 import { installSkillFromZip } from './commands/install.js';
 
 const VALID_SKILL = `---
@@ -78,7 +79,7 @@ function writeSkillsProject(root: string): void {
     mkdirSync(path.join(root, '.agents', 'examples'), { recursive: true });
     const body =
       example === 'worker.yaml'
-        ? 'spec:\n  runtime: openclaw\n  role: developer\n  token:\n    type: consumer\n'
+        ? 'apiVersion: agentteams.io/v1beta1\nkind: Worker\nmetadata:\n  name: dev-worker\nspec:\n  model: qwen3.5-plus\n  runtime: openclaw\n  role: developer\n'
         : 'spec:\n  name: sample\n';
     writeFileSync(path.join(root, '.agents', 'examples', example), body);
   }
@@ -205,13 +206,13 @@ triage
     expect(runPack(['skill', skillDir])).toBe(1);
   });
 
-  it('pack worker produces a HiMarket-compatible ZIP', () => {
+  it('pack worker produces an AgentTeams-native ZIP', () => {
     const root = makeTempDir();
     const workerDir = path.join(root, 'qa-worker');
     mkdirSync(path.join(workerDir, 'skills', 'verify'), { recursive: true });
     writeFileSync(
       path.join(workerDir, 'worker.yaml'),
-      'apiVersion: agentteams.io/v1\nkind: Worker\nmetadata:\n  name: qa-worker\nspec:\n  version: 1.0.0\n  role: qa\n  skills:\n    - verify\n',
+      'apiVersion: agentteams.io/v1beta1\nkind: Worker\nmetadata:\n  name: qa-worker\nspec:\n  model: qwen3.5-plus\n  runtime: openclaw\n  skills:\n    - verify\n',
     );
     writeFileSync(path.join(workerDir, 'README.md'), '# QA Worker');
     writeFileSync(path.join(workerDir, 'skills', 'verify', 'SKILL.md'), '# verify\n');
@@ -222,11 +223,62 @@ triage
 
     const zip = new AdmZip(output);
     const names = zip.getEntries().map((entry) => entry.entryName).sort();
-    expect(names).toEqual([
-      'README.md',
-      'skills/verify/SKILL.md',
-      'worker.yaml',
-    ]);
+    expect(names).toContain('manifest.json');
+    expect(names).toContain('skills/verify/SKILL.md');
+    expect(zip.readAsText('manifest.json')).toContain('"suggested_name": "qa-worker"');
+  });
+
+  it('pack worker fails when spec.model is missing and no --model is given', () => {
+    const root = makeTempDir();
+    const workerDir = path.join(root, 'bad-worker');
+    mkdirSync(workerDir, { recursive: true });
+    writeFileSync(
+      path.join(workerDir, 'worker.yaml'),
+      'apiVersion: agentteams.io/v1beta1\nkind: Worker\nmetadata:\n  name: bad\nspec:\n  runtime: openclaw\n',
+    );
+    expect(runPack(['worker', workerDir])).toBe(1);
+  });
+
+  it('apply worker --zip generates a Worker CR from an AgentTeams-native package', () => {
+    const root = makeTempDir();
+    const workerDir = path.join(root, 'qa-worker');
+    mkdirSync(path.join(workerDir, 'skills', 'verify'), { recursive: true });
+    writeFileSync(
+      path.join(workerDir, 'worker.yaml'),
+      'apiVersion: agentteams.io/v1beta1\nkind: Worker\nmetadata:\n  name: qa-worker\nspec:\n  model: qwen3.5-plus\n  runtime: openclaw\n  skills:\n    - verify\n',
+    );
+    writeFileSync(path.join(workerDir, 'skills', 'verify', 'SKILL.md'), '# verify\n');
+
+    const zipPath = path.join(root, 'qa-worker.zip');
+    expect(runPack(['worker', workerDir, '--output', zipPath])).toBe(0);
+
+    const output = path.join(root, 'applied-worker.yaml');
+    expect(
+      runApply([
+        'worker',
+        '--zip',
+        zipPath,
+        '--package-uri',
+        'packages/qa-worker.zip',
+        '--output',
+        output,
+      ]),
+    ).toBe(0);
+    expect(existsSync(output)).toBe(true);
+    const cr = readFileSync(output, 'utf8');
+    expect(cr).toContain('apiVersion: agentteams.io/v1beta1');
+    expect(cr).toContain('kind: Worker');
+    expect(cr).toContain('name: qa-worker');
+    expect(cr).toContain('package: packages/qa-worker.zip');
+  });
+
+  it('apply worker fails for a non-package ZIP', () => {
+    const root = makeTempDir();
+    const zipPath = path.join(root, 'bad.zip');
+    const zip = new AdmZip();
+    zip.addFile('notes.txt', Buffer.from('hi'));
+    zip.writeZip(zipPath);
+    expect(runApply(['worker', '--zip', zipPath])).toBe(1);
   });
 
   it('install skill from a local ZIP writes SKILL.md to target', () => {
