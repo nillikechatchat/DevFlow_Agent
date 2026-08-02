@@ -4,7 +4,7 @@ import { issuespecRouter } from './routes.js';
 import { storage } from './storage.js';
 
 const app = express();
-const PORT = process.env.PORT || 8091;
+const PORT = process.env.ISSUESPEC_SERVER_PORT || process.env.PORT || 8091;
 
 // Seed data if empty
 if (storage.listChanges().length === 0) {

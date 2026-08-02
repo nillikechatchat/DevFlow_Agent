@@ -5,7 +5,7 @@
 const { createServer } = require('http');
 const path = require('path');
 
-const ISSUESPEC_PORT = process.env.ISSUESPEC_SERVER_PORT || 8091;
+const ISSUESPEC_PORT = 8091; // Fixed port, cannot use 3000
 const DASHBOARD_PORT = process.env.PORT || 3000;
 
 function log(prefix, msg) {
@@ -21,10 +21,15 @@ async function main() {
   // Load issue-spec server
   const issueSpecPath = path.join(__dirname, 'index.js');
   log('INFO', `Loading issue-spec server: ${issueSpecPath}`);
+  
+  // Set PORT env for issue-spec server before requiring
+  process.env.ISSUESPEC_SERVER_PORT = ISSUESPEC_PORT.toString();
+  delete process.env.PORT; // Remove to avoid conflict
+  
   require(issueSpecPath);
   log('INFO', 'Issue-spec server loaded');
 
-  // Wait for issue-spec server to start
+  // Wait for issue-spec server to start on port 8091
   await new Promise((resolve) => {
     let retries = 0;
     const interval = setInterval(async () => {
@@ -34,12 +39,13 @@ async function main() {
           clearInterval(interval);
           log('INFO', `Issue-spec server ready on port ${ISSUESPEC_PORT}`);
           resolve();
+          return;
         }
       } catch {}
       retries++;
       if (retries > 20) {
         clearInterval(interval);
-        log('WARN', 'Issue-spec server may not be ready');
+        log('WARN', `Issue-spec server may not be ready on port ${ISSUESPEC_PORT}`);
         resolve();
       }
     }, 500);
@@ -53,14 +59,47 @@ async function main() {
   process.env.PORT = DASHBOARD_PORT.toString();
   process.env.NODE_ENV = 'production';
   
+  // Determine the project root directory where .next exists
+  // In Docker: /app, in local: current directory
+  const possibleDirs = [
+    path.join(__dirname, '../../../..'),  // packages/issue-spec-server/dist -> /app
+    path.join(__dirname, '../../..'),      // packages/issue-spec-server/dist -> /app (if copied)
+    process.cwd(),                         // current directory
+    '/app',                                // Docker default
+  ];
+  
+  let projectDir = null;
+  for (const dir of possibleDirs) {
+    const nextDir = path.join(dir, '.next');
+    if (require('fs').existsSync(nextDir)) {
+      projectDir = dir;
+      break;
+    }
+  }
+  
+  if (!projectDir) {
+    // Fallback: look for .next in parent directories
+    let current = process.cwd();
+    for (let i = 0; i < 5; i++) {
+      if (require('fs').existsSync(path.join(current, '.next'))) {
+        projectDir = current;
+        break;
+      }
+      current = path.dirname(current);
+    }
+  }
+  
+  projectDir = projectDir || process.cwd();
+  log('INFO', `Starting Next.js server in: ${projectDir}`);
+  
+  // Change to project directory
+  process.chdir(projectDir);
+  
   // Use Next.js internal API
   const { getRequestHandlers } = require('next/dist/server/lib/start-server');
-  const dir = path.join(__dirname, '../../../..'); // workspace root
-  
-  log('INFO', `Starting Next.js server in: ${dir}`);
   
   const handlers = await getRequestHandlers({
-    dir,
+    dir: projectDir,
     port: DASHBOARD_PORT,
     hostname: '0.0.0.0',
     isDev: false,
