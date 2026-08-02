@@ -46,8 +46,8 @@ ARG APK_MIRROR=mirrors.aliyun.com
 RUN sed -i "s|dl-cdn.alpinelinux.org|${APK_MIRROR}|g" /etc/apk/repositories && \
     apk add --no-cache ca-certificates
 
-COPY packages/issue-spec-server/package.json packages/issue-spec-server/package-lock.json ./
-RUN npm ci --no-audit --no-fund
+COPY packages/issue-spec-server/package.json ./
+RUN npm install --no-audit --no-fund --production=false
 
 COPY packages/issue-spec-server ./
 RUN npm run build
