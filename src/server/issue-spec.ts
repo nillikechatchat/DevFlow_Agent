@@ -202,8 +202,8 @@ export const storage = new Storage();
 
 export function createIssueSpecServer(port: number = 8091) {
   // Dynamic import to avoid bundling express in Next.js
-  const { default: express } = require('express') as typeof import('express');
-  const { default: cors } = require('cors') as typeof import('cors');
+  const express = require('express');
+  const cors = require('cors');
   
   const app = express();
   
