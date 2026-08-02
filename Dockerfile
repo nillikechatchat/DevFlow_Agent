@@ -1,12 +1,12 @@
 # ============================================================
 # AgentTeams-Dashboard - Production Dockerfile
-# Issue-spec server is now embedded in the Dashboard
+# Issue-spec server runs as separate container on port 8091
 # ============================================================
 # Build:
 #   docker build -t agentteams-dashboard:latest .
 # Run:
 #   docker run -d -p 3000:3000 \
-#     -e ISSUESPEC_STORAGE_PATH=/app/db/store.json \
+#     -e ISSUESPEC_SERVER_URL=http://host.docker.internal:8091 \
 #     agentteams-dashboard:latest
 
 FROM node:20-alpine AS builder
@@ -25,7 +25,7 @@ ARG APK_MIRROR=mirrors.aliyun.com
 RUN sed -i "s|dl-cdn.alpinelinux.org|${APK_MIRROR}|g" /etc/apk/repositories && \
     apk add --no-cache ca-certificates
 
-# Install all dependencies (includes workspaces)
+# Install all dependencies
 ARG NPM_REGISTRY=https://registry.npmmirror.com
 COPY package.json package-lock.json ./
 RUN npm config set registry "${NPM_REGISTRY}" && \
@@ -50,19 +50,14 @@ ARG APK_MIRROR=mirrors.aliyun.com
 RUN sed -i "s|dl-cdn.alpinelinux.org|${APK_MIRROR}|g" /etc/apk/repositories && \
     apk add --no-cache ca-certificates
 
-# Create non-root user and persistent data directory
+# Create non-root user
 RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs && \
-    mkdir -p /app/db && \
-    chown -R nextjs:nodejs /app
+    adduser --system --uid 1001 nextjs
 
 # Copy standalone output
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-
-# Copy server-side issue-spec module
-COPY --from=builder --chown=nextjs:nodejs /app/src/server ./src/server
 
 USER nextjs
 

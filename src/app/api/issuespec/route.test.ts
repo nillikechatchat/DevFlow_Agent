@@ -1,20 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { NextRequest } from 'next/server';
 
-// Use vi.hoisted() to define mock before vi.mock is hoisted
-const mockedStorage = vi.hoisted(() => ({
-  listChanges: vi.fn(),
-  getChange: vi.fn(),
-  getComments: vi.fn(),
-  getDag: vi.fn(),
-  getTasks: vi.fn(),
-  getVerify: vi.fn(),
-  getApprovals: vi.fn(),
-  createApproval: vi.fn(),
-  setVerify: vi.fn(),
-}));
+// Mock proxy helper
+const mockProxyToIssueSpec = vi.fn();
 
-vi.mock('@/server/issue-spec', () => ({
-  storage: mockedStorage,
+vi.mock('@/app/api/issuespec/proxy-helper', () => ({
+  getIssueSpecServerUrl: vi.fn(() => 'http://localhost:8091'),
+  proxyToIssueSpec: (...args: any[]) => mockProxyToIssueSpec(...args),
 }));
 
 import { GET as getChanges } from './changes/route';
@@ -26,136 +18,136 @@ import { GET as getVerify } from './changes/[id]/verify/route';
 import { GET as getApprovals, POST as postApproval } from './changes/[id]/approvals/route';
 import { POST as postGatewayVerify } from './gateways/verify/route';
 
-describe('issue-spec API routes (embedded)', () => {
+describe('issue-spec API routes (proxy)', () => {
   afterEach(() => {
     vi.clearAllMocks();
   });
 
-  it('returns the change list', async () => {
-    mockedStorage.listChanges.mockReturnValue([
-      { id: 'change-001', stage: 'proposal', title: 'Test', repo: 'test', status: 'open', updatedAt: '2026-01-01' },
-    ]);
-
-    const response = await getChanges(new Request('http://localhost:3000/api/issuespec/changes'));
-    expect(response.status).toBe(200);
-    const body = await response.json();
-    expect(body).toEqual([
-      { id: 'change-001', stage: 'proposal', title: 'Test', repo: 'test', status: 'open', updatedAt: '2026-01-01' },
-    ]);
+  it('proxies change list request', async () => {
+    mockProxyToIssueSpec.mockResolvedValue(new Response(JSON.stringify([{ id: 'change-001' }])));
+    
+    await getChanges(new NextRequest('http://localhost:3000/api/issuespec/changes'));
+    expect(mockProxyToIssueSpec).toHaveBeenCalledWith(
+      expect.any(Request),
+      '/api/changes',
+      { forwardBody: false },
+    );
   });
 
-  it('returns a single change detail with comments', async () => {
-    mockedStorage.getChange.mockReturnValue({ id: 'abc', stage: 'design', title: 'Test', repo: 'test', status: 'open', updatedAt: '2026-01-01' });
-    mockedStorage.getComments.mockReturnValue([
-      { id: 'c1', type: 'SPEC', author: 'user', createdAt: '2026-01-01', content: 'comment', changeId: 'abc' },
-    ]);
-
-    const response = await getChangeDetail(
-      new Request('http://localhost:3000/api/issuespec/changes/abc'),
+  it('proxies single change detail by id', async () => {
+    mockProxyToIssueSpec.mockResolvedValue(new Response(JSON.stringify({ id: 'abc' })));
+    
+    await getChangeDetail(
+      new NextRequest('http://localhost:3000/api/issuespec/changes/abc'),
       { params: Promise.resolve({ id: 'abc' }) },
     );
-    expect(response.status).toBe(200);
-    const body = await response.json();
-    expect(body.id).toBe('abc');
-    expect(body.comments).toHaveLength(1);
-  });
-
-  it('returns 404 for missing change', async () => {
-    mockedStorage.getChange.mockReturnValue(undefined);
-
-    const response = await getChangeDetail(
-      new Request('http://localhost:3000/api/issuespec/changes/missing'),
-      { params: Promise.resolve({ id: 'missing' }) },
+    expect(mockProxyToIssueSpec).toHaveBeenCalledWith(
+      expect.any(Request),
+      '/api/changes/abc',
+      { forwardBody: false },
     );
-    expect(response.status).toBe(404);
   });
 
-  it('returns timeline sorted by date', async () => {
-    mockedStorage.getComments.mockReturnValue([
-      { id: 'c2', type: 'QUESTION', author: 'user', createdAt: '2026-01-02', content: 'q2', changeId: 'abc' },
-      { id: 'c1', type: 'SPEC', author: 'user', createdAt: '2026-01-01', content: 'q1', changeId: 'abc' },
-    ]);
-
-    const response = await getTimeline(
-      new Request('http://localhost:3000/api/issuespec/changes/abc/timeline'),
+  it('proxies timeline request', async () => {
+    mockProxyToIssueSpec.mockResolvedValue(new Response(JSON.stringify([])));
+    
+    await getTimeline(
+      new NextRequest('http://localhost:3000/api/issuespec/changes/abc/timeline'),
       { params: Promise.resolve({ id: 'abc' }) },
     );
-    expect(response.status).toBe(200);
-    const body = await response.json();
-    expect(body[0].id).toBe('c1');
-    expect(body[1].id).toBe('c2');
+    expect(mockProxyToIssueSpec).toHaveBeenCalledWith(
+      expect.any(Request),
+      '/api/changes/abc/timeline',
+      { forwardBody: false },
+    );
   });
 
-  it('returns DAG data', async () => {
-    mockedStorage.getDag.mockReturnValue({ nodes: [{ id: 'n1', name: 'Task', owner: 'user', dependencies: [], parallelWith: [], status: 'PENDING' }] });
-
-    const response = await getDag(
-      new Request('http://localhost:3000/api/issuespec/changes/abc/dag'),
+  it('proxies dag request', async () => {
+    mockProxyToIssueSpec.mockResolvedValue(new Response(JSON.stringify({ nodes: [] })));
+    
+    await getDag(
+      new NextRequest('http://localhost:3000/api/issuespec/changes/abc/dag'),
       { params: Promise.resolve({ id: 'abc' }) },
     );
-    expect(response.status).toBe(200);
-    const body = await response.json();
-    expect(body.nodes).toHaveLength(1);
+    expect(mockProxyToIssueSpec).toHaveBeenCalledWith(
+      expect.any(Request),
+      '/api/changes/abc/dag',
+      { forwardBody: false },
+    );
   });
 
-  it('returns tasks', async () => {
-    mockedStorage.getTasks.mockReturnValue([{ id: 't1', changeId: 'abc', title: 'Task', status: 'open' }]);
-
-    const response = await getTasks(
-      new Request('http://localhost:3000/api/issuespec/changes/abc/tasks'),
+  it('proxies tasks request', async () => {
+    mockProxyToIssueSpec.mockResolvedValue(new Response(JSON.stringify([])));
+    
+    await getTasks(
+      new NextRequest('http://localhost:3000/api/issuespec/changes/abc/tasks'),
       { params: Promise.resolve({ id: 'abc' }) },
     );
-    expect(response.status).toBe(200);
+    expect(mockProxyToIssueSpec).toHaveBeenCalledWith(
+      expect.any(Request),
+      '/api/changes/abc/tasks',
+      { forwardBody: false },
+    );
   });
 
-  it('returns verify result', async () => {
-    mockedStorage.getVerify.mockReturnValue({ change: 'abc', status: 'PASS', blocking_questions: 0, traceability: 'ok', p0_p1_open: 0, pr_checks: 'passed', reasons: [] });
-
-    const response = await getVerify(
-      new Request('http://localhost:3000/api/issuespec/changes/abc/verify'),
+  it('proxies verify request', async () => {
+    mockProxyToIssueSpec.mockResolvedValue(new Response(JSON.stringify({ status: 'PASS' })));
+    
+    await getVerify(
+      new NextRequest('http://localhost:3000/api/issuespec/changes/abc/verify'),
       { params: Promise.resolve({ id: 'abc' }) },
     );
-    expect(response.status).toBe(200);
+    expect(mockProxyToIssueSpec).toHaveBeenCalledWith(
+      expect.any(Request),
+      '/api/changes/abc/verify',
+      { forwardBody: false },
+    );
   });
 
-  it('returns approvals with GET', async () => {
-    mockedStorage.getApprovals.mockReturnValue([]);
-
-    const response = await getApprovals(
-      new Request('http://localhost:3000/api/issuespec/changes/abc/approvals'),
+  it('proxies approvals GET', async () => {
+    mockProxyToIssueSpec.mockResolvedValue(new Response(JSON.stringify([])));
+    
+    await getApprovals(
+      new NextRequest('http://localhost:3000/api/issuespec/changes/abc/approvals'),
       { params: Promise.resolve({ id: 'abc' }) },
     );
-    expect(response.status).toBe(200);
+    expect(mockProxyToIssueSpec).toHaveBeenCalledWith(
+      expect.any(Request),
+      '/api/changes/abc/approvals',
+      { forwardBody: false },
+    );
   });
 
-  it('creates approval with POST', async () => {
-    mockedStorage.createApproval.mockReturnValue(undefined);
-
-    const response = await postApproval(
-      new Request('http://localhost:3000/api/issuespec/changes/abc/approvals', {
+  it('proxies approvals POST', async () => {
+    mockProxyToIssueSpec.mockResolvedValue(new Response(JSON.stringify({ decision: 'approved' })));
+    
+    await postApproval(
+      new NextRequest('http://localhost:3000/api/issuespec/changes/abc/approvals', {
         method: 'POST',
-        body: JSON.stringify({ decision: 'approved', reason: 'LGTM' }),
+        body: JSON.stringify({ decision: 'approved' }),
       }),
       { params: Promise.resolve({ id: 'abc' }) },
     );
-    expect(response.status).toBe(200);
-    const body = await response.json();
-    expect(body.decision).toBe('approved');
-    expect(body.reason).toBe('LGTM');
+    expect(mockProxyToIssueSpec).toHaveBeenCalledWith(
+      expect.any(Request),
+      '/api/changes/abc/approvals',
+      { forwardBody: true, method: 'POST' },
+    );
   });
 
-  it('triggers verify through gateways endpoint', async () => {
-    mockedStorage.setVerify.mockReturnValue(undefined);
-
-    const response = await postGatewayVerify(
-      new Request('http://localhost:3000/api/issuespec/gateways/verify', {
+  it('proxies gateway verify POST', async () => {
+    mockProxyToIssueSpec.mockResolvedValue(new Response(JSON.stringify({ change: 'abc' })));
+    
+    await postGatewayVerify(
+      new NextRequest('http://localhost:3000/api/issuespec/gateways/verify', {
         method: 'POST',
         body: JSON.stringify({ changeId: 'abc' }),
       }),
     );
-    expect(response.status).toBe(200);
-    const body = await response.json();
-    expect(body.change).toBe('abc');
-    expect(body.status).toBe('PASS');
+    expect(mockProxyToIssueSpec).toHaveBeenCalledWith(
+      expect.any(Request),
+      '/api/gateways/verify',
+      { forwardBody: true, method: 'POST' },
+    );
   });
 });

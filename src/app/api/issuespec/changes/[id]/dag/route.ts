@@ -1,14 +1,10 @@
-import { NextResponse } from 'next/server';
-import { storage } from '@/server/issue-spec';
+import { NextRequest } from 'next/server';
+import { proxyToIssueSpec } from '../../../proxy-helper';
 
 export async function GET(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const dag = storage.getDag(id);
-  if (!dag) {
-    return NextResponse.json({ error: 'DAG not found' }, { status: 404 });
-  }
-  return NextResponse.json(dag);
+  return proxyToIssueSpec(request, `/api/changes/${encodeURIComponent(id)}/dag`, { forwardBody: false });
 }

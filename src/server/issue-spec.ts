@@ -1,5 +1,5 @@
-// Embedded Issue-Spec Server Module
-// This module can be used as a standalone server or embedded in the Dashboard
+// Issue-Spec Server Module
+// Can be used as standalone server (port 8091) or embedded
 
 import express from 'express';
 import cors from 'cors';
@@ -24,7 +24,7 @@ class Storage {
 
   private load(): StoreData {
     try {
-      const { readFileSync, writeFileSync, existsSync } = require('node:fs');
+      const { readFileSync, existsSync } = require('node:fs');
       const { join } = require('node:path');
 
       const STORAGE_FILE_PATH = process.env.ISSUESPEC_STORAGE_PATH || join(process.cwd(), 'data', 'store.json');
@@ -201,18 +201,20 @@ class Storage {
 
 export const storage = new Storage();
 
-// ============ Router ============
+// ============ Standalone Server ============
 
-export function createIssueSpecRouter() {
-  const router = express.Router();
-
-  // ============ Changes ============
-
-  router.get('/changes', (_req: Request, res: Response) => {
+export function createIssueSpecServer(port: number = 8091) {
+  const app = express();
+  
+  app.use(cors());
+  app.use(express.json());
+  
+  // Routes
+  app.get('/api/changes', (_req: Request, res: Response) => {
     res.json(storage.listChanges());
   });
-
-  router.get('/changes/:id', (req: Request, res: Response) => {
+  
+  app.get('/api/changes/:id', (req: Request, res: Response) => {
     const change = storage.getChange(req.params.id);
     if (!change) {
       res.status(404).json({ error: 'Change not found' });
@@ -221,17 +223,13 @@ export function createIssueSpecRouter() {
     const comments = storage.getComments(req.params.id);
     res.json({ ...change, comments });
   });
-
-  // ============ Timeline ============
-
-  router.get('/changes/:id/timeline', (req: Request, res: Response) => {
+  
+  app.get('/api/changes/:id/timeline', (req: Request, res: Response) => {
     const comments = storage.getComments(req.params.id);
     res.json(comments.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()));
   });
-
-  // ============ DAG ============
-
-  router.get('/changes/:id/dag', (req: Request, res: Response) => {
+  
+  app.get('/api/changes/:id/dag', (req: Request, res: Response) => {
     const dag = storage.getDag(req.params.id);
     if (!dag) {
       res.status(404).json({ error: 'DAG not found' });
@@ -239,16 +237,12 @@ export function createIssueSpecRouter() {
     }
     res.json(dag);
   });
-
-  // ============ Tasks ============
-
-  router.get('/changes/:id/tasks', (req: Request, res: Response) => {
+  
+  app.get('/api/changes/:id/tasks', (req: Request, res: Response) => {
     res.json(storage.getTasks(req.params.id));
   });
-
-  // ============ Verify ============
-
-  router.get('/changes/:id/verify', (req: Request, res: Response) => {
+  
+  app.get('/api/changes/:id/verify', (req: Request, res: Response) => {
     const result = storage.getVerify(req.params.id);
     if (!result) {
       res.status(404).json({ error: 'Verify result not found' });
@@ -256,14 +250,13 @@ export function createIssueSpecRouter() {
     }
     res.json(result);
   });
-
-  router.post('/gateways/verify', (req: Request, res: Response) => {
+  
+  app.post('/api/gateways/verify', (req: Request, res: Response) => {
     const { changeId } = req.body as { changeId: string };
     if (!changeId) {
       res.status(400).json({ error: 'changeId is required' });
       return;
     }
-
     const result: VerifyResult = {
       change: changeId,
       status: 'PASS' as const,
@@ -276,25 +269,21 @@ export function createIssueSpecRouter() {
     storage.setVerify(changeId, result);
     res.json(result);
   });
-
-  // ============ Approvals ============
-
-  router.get('/changes/:id/approvals', (req: Request, res: Response) => {
+  
+  app.get('/api/changes/:id/approvals', (req: Request, res: Response) => {
     res.json(storage.getApprovals(req.params.id));
   });
-
-  router.post('/changes/:id/approvals', (req: Request, res: Response) => {
+  
+  app.post('/api/changes/:id/approvals', (req: Request, res: Response) => {
     const { decision, reason, decidedBy } = req.body as {
       decision: ApprovalDecision;
       reason?: string;
       decidedBy?: string;
     };
-
     if (!decision) {
       res.status(400).json({ error: 'decision is required' });
       return;
     }
-
     const approval: ApprovalRecord = {
       id: `appr-${Date.now()}`,
       changeId: req.params.id,
@@ -308,41 +297,23 @@ export function createIssueSpecRouter() {
     storage.createApproval(approval);
     res.json(approval);
   });
-
-  // ============ Health ============
-
-  router.get('/health', (_req: Request, res: Response) => {
-    res.json({ status: 'ok', service: 'issue-spec-server', timestamp: new Date().toISOString() });
-  });
-
-  return router;
-}
-
-// ============ Standalone Server ============
-
-export function createIssueSpecServer(port: number = 8091) {
-  const app = express();
-  const router = createIssueSpecRouter();
-
-  app.use(cors());
-  app.use(express.json());
-  app.use('/api', router);
+  
   app.get('/health', (_req: Request, res: Response) => {
     res.json({ status: 'ok', service: 'issue-spec-server', timestamp: new Date().toISOString() });
   });
-
+  
   app.listen(port, () => {
     console.log(`Issue-spec server running at http://localhost:${port}`);
     console.log(`Health check: http://localhost:${port}/health`);
     console.log(`API docs: http://localhost:${port}/api/changes`);
   });
-
+  
   return app;
 }
 
 // ============ Entry Point ============
 
 if (require.main === module) {
-  const port = parseInt(process.env.PORT || '8091', 10);
+  const port = parseInt(process.env.ISSUESPEC_SERVER_PORT || process.env.PORT || '8091', 10);
   createIssueSpecServer(port);
 }

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Start AgentTeams Dashboard
+# Start AgentTeams Dashboard with issue-spec server
 # Usage: bash start-dashboard.sh [dev|build]
 
 set -e
@@ -15,6 +15,8 @@ info()  { echo -e "${CYAN}[INFO]${NC}  $*"; }
 ok()    { echo -e "${GREEN}[OK]${NC}    $*"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 
+ISSUESPEC_PID=""
+
 # Check prerequisites
 check_prerequisites() {
   if ! command -v node >/dev/null 2>&1; then
@@ -28,6 +30,40 @@ check_prerequisites() {
   ok "Prerequisites check passed"
 }
 
+# Start issue-spec server
+start_issuespec() {
+  info "Starting issue-spec server on port 8091..."
+  cd "$SCRIPT_DIR/packages/issue-spec-server"
+  
+  # Start in background
+  NODE_PATH="$SCRIPT_DIR/node_modules" npm start > /tmp/issue-spec-server.log 2>&1 &
+  ISSUESPEC_PID=$!
+  cd "$SCRIPT_DIR"
+  
+  # Wait for server to be ready
+  for i in {1..15}; do
+    if curl -s http://localhost:8091/health >/dev/null 2>&1; then
+      ok "Issue-spec server ready (PID: $ISSUESPEC_PID)"
+      return 0
+    fi
+    sleep 1
+  done
+  
+  warn "Issue-spec server may not be ready yet"
+  return 1
+}
+
+# Stop issue-spec server
+stop_issuespec() {
+  if [ -n "$ISSUESPEC_PID" ]; then
+    kill "$ISSUESPEC_PID" 2>/dev/null || true
+    ok "Issue-spec server stopped"
+  fi
+}
+
+# Trap to stop on exit
+trap stop_issuespec EXIT
+
 # Main
 case "$MODE" in
   dev)
@@ -36,9 +72,12 @@ case "$MODE" in
     info "Installing dependencies..."
     npm ci --no-audit --no-fund >/dev/null 2>&1 || npm install --no-audit --no-fund
     
+    start_issuespec
+    
     info "Starting Dashboard in development mode..."
-    info "Access: http://localhost:3000"
-    info "API:    http://localhost:3000/api/issuespec/changes"
+    info "  Dashboard:    http://localhost:3000"
+    info "  Issue-spec:   http://localhost:8091"
+    info "  API proxy:    http://localhost:3000/api/issuespec"
     npm run dev
     ;;
   build)
@@ -47,8 +86,11 @@ case "$MODE" in
     info "Building project..."
     npm run build
     
-    info "Starting production server..."
-    info "Access: http://localhost:3000"
+    info "Starting production servers..."
+    start_issuespec
+    
+    # Set env and start
+    export ISSUESPEC_SERVER_URL=http://localhost:8091
     npm start
     ;;
   *)

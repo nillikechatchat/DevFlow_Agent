@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { storage } from '@/server/issue-spec';
+import { proxyToIssueSpec } from '../proxy-helper';
 
-export async function GET(_request: NextRequest) {
-  const changes = storage.listChanges();
-  return NextResponse.json(changes);
+export async function GET(request: NextRequest) {
+  return proxyToIssueSpec(request, '/api/changes', { forwardBody: false });
 }

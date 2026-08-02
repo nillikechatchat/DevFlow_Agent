@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { storage } from '@/server/issue-spec';
+import { proxyToIssueSpec } from '../../../proxy-helper';
 
 export async function GET(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  return NextResponse.json(storage.getApprovals(id));
+  return proxyToIssueSpec(request, `/api/changes/${encodeURIComponent(id)}/approvals`, { forwardBody: false });
 }
 
 export async function POST(
@@ -14,23 +14,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const body = await request.json();
-  const { decision, reason, decidedBy } = body;
-
-  if (!decision) {
-    return NextResponse.json({ error: 'decision is required' }, { status: 400 });
-  }
-
-  const approval = {
-    id: `appr-${Date.now()}`,
-    changeId: id,
-    action: decision,
-    requestedAt: new Date().toISOString(),
-    decidedBy,
-    decision,
-    decidedAt: new Date().toISOString(),
-    reason,
-  };
-  storage.createApproval(approval);
-  return NextResponse.json(approval);
+  return proxyToIssueSpec(request, `/api/changes/${encodeURIComponent(id)}/approvals`, { 
+    forwardBody: true,
+    method: 'POST'
+  });
 }

@@ -1,16 +1,14 @@
 // Shared proxy helper for issue-spec API routes.
-// The issue-spec functionality is now embedded in the Dashboard.
-// This file is kept for backward compatibility.
+// Proxies requests to the standalone issue-spec server.
 
 import { NextRequest, NextResponse } from 'next/server';
 
 const TIMEOUT_MS = 10000;
 
-// Issue-spec is now embedded - all routes are handled directly in src/app/api/issuespec/
-// This helper is deprecated and kept for potential future use.
+const DEFAULT_ISSUESPEC_SERVER_URL = 'http://localhost:8091';
 
 export function getIssueSpecServerUrl(): string {
-  return process.env.ISSUESPEC_SERVER_URL || 'http://localhost:8091';
+  return process.env.ISSUESPEC_SERVER_URL || DEFAULT_ISSUESPEC_SERVER_URL;
 }
 
 export function assertSafeIssueSpecUrl(url: string): void {
@@ -22,7 +20,6 @@ export function assertSafeIssueSpecUrl(url: string): void {
 
 export async function proxyToIssueSpec(
   request: NextRequest,
-  serverUrl: string,
   path: string,
   options: {
     method?: string;
@@ -30,6 +27,7 @@ export async function proxyToIssueSpec(
     contentType?: string;
   } = {}
 ): Promise<NextResponse> {
+  const serverUrl = getIssueSpecServerUrl();
   const { method = request.method, forwardBody = true, contentType } = options;
   const targetUrl = new URL(path, serverUrl).toString();
 
@@ -44,17 +42,9 @@ export async function proxyToIssueSpec(
     };
 
     if (forwardBody && ['POST', 'PUT', 'PATCH'].includes(method)) {
-      if (contentType === 'multipart/form-data') {
-        const body = await request.arrayBuffer();
-        fetchOptions.body = body;
-        const origCT = request.headers.get('content-type');
-        if (origCT) {
-          (fetchOptions.headers as Record<string, string>)['content-type'] = origCT;
-        }
-      } else {
-        fetchOptions.body = await request.text();
-        (fetchOptions.headers as Record<string, string>)['content-type'] = 'application/json';
-      }
+      const body = await request.text();
+      fetchOptions.body = body;
+      (fetchOptions.headers as Record<string, string>)['content-type'] = 'application/json';
     }
 
     const res = await fetch(targetUrl, fetchOptions);
