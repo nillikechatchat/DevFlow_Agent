@@ -1,5 +1,4 @@
 import { StoreData, ChangeSummary, TypedComment, ProcessDag, TaskItem, VerifyResult, ApprovalRecord } from './types.js';
-import { randomUUID } from 'node:crypto';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -17,7 +16,16 @@ class Storage {
     try {
       if (existsSync(STORAGE_FILE)) {
         const raw = readFileSync(STORAGE_FILE, 'utf-8');
-        return JSON.parse(raw) as StoreData;
+        const loaded = JSON.parse(raw) as StoreData;
+        // Ensure all fields exist
+        return {
+          changes: loaded.changes || [],
+          comments: loaded.comments || [],
+          dags: loaded.dags || {},
+          tasks: loaded.tasks || [],
+          verifyResults: loaded.verifyResults || {},
+          approvals: loaded.approvals || [],
+        };
       }
     } catch {
       // ignore
@@ -127,11 +135,11 @@ class Storage {
 
   // DAG
   getDag(changeId: string): ProcessDag | undefined {
-    return this.data.dags[changeId];
+    return this.data.dags?.[changeId];
   }
 
   setDag(changeId: string, dag: ProcessDag): void {
-    this.data.dags[changeId] = dag;
+    this.data.dags = { ...this.data.dags, [changeId]: dag };
     this.scheduleSave();
   }
 
@@ -155,11 +163,11 @@ class Storage {
 
   // Verify
   getVerify(changeId: string): VerifyResult | undefined {
-    return this.data.verifyResults[changeId];
+    return this.data.verifyResults?.[changeId];
   }
 
   setVerify(changeId: string, result: VerifyResult): void {
-    this.data.verifyResults[changeId] = result;
+    this.data.verifyResults = { ...this.data.verifyResults, [changeId]: result };
     this.scheduleSave();
   }
 
