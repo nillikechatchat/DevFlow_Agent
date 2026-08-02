@@ -4,6 +4,12 @@ import type { ApprovalDecision } from './types.js';
 
 const router = Router();
 
+// Helper to extract string param from Express request
+const param = (req: Request, key: string): string => {
+  const val = req.params[key];
+  return Array.isArray(val) ? val[0] : val;
+};
+
 // ============ Changes ============
 
 router.get('/changes', (_req: Request, res: Response) => {
@@ -11,26 +17,29 @@ router.get('/changes', (_req: Request, res: Response) => {
 });
 
 router.get('/changes/:id', (req: Request, res: Response) => {
-  const change = storage.getChange(req.params.id);
+  const id = param(req, 'id');
+  const change = storage.getChange(id);
   if (!change) {
     res.status(404).json({ error: 'Change not found' });
     return;
   }
-  const comments = storage.getComments(req.params.id);
+  const comments = storage.getComments(id);
   res.json({ ...change, comments });
 });
 
 // ============ Timeline ============
 
 router.get('/changes/:id/timeline', (req: Request, res: Response) => {
-  const comments = storage.getComments(req.params.id);
+  const id = param(req, 'id');
+  const comments = storage.getComments(id);
   res.json(comments.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()));
 });
 
 // ============ DAG ============
 
 router.get('/changes/:id/dag', (req: Request, res: Response) => {
-  const dag = storage.getDag(req.params.id);
+  const id = param(req, 'id');
+  const dag = storage.getDag(id);
   if (!dag) {
     res.status(404).json({ error: 'DAG not found' });
     return;
@@ -41,13 +50,15 @@ router.get('/changes/:id/dag', (req: Request, res: Response) => {
 // ============ Tasks ============
 
 router.get('/changes/:id/tasks', (req: Request, res: Response) => {
-  res.json(storage.getTasks(req.params.id));
+  const id = param(req, 'id');
+  res.json(storage.getTasks(id));
 });
 
 // ============ Verify ============
 
 router.get('/changes/:id/verify', (req: Request, res: Response) => {
-  const result = storage.getVerify(req.params.id);
+  const id = param(req, 'id');
+  const result = storage.getVerify(id);
   if (!result) {
     res.status(404).json({ error: 'Verify result not found' });
     return;
@@ -79,7 +90,8 @@ router.post('/gateways/verify', (req: Request, res: Response) => {
 // ============ Approvals ============
 
 router.get('/changes/:id/approvals', (req: Request, res: Response) => {
-  res.json(storage.getApprovals(req.params.id));
+  const id = param(req, 'id');
+  res.json(storage.getApprovals(id));
 });
 
 router.post('/changes/:id/approvals', (req: Request, res: Response) => {
@@ -94,9 +106,10 @@ router.post('/changes/:id/approvals', (req: Request, res: Response) => {
     return;
   }
 
+  const id = param(req, 'id');
   const approval = {
     id: `appr-${Date.now()}`,
-    changeId: req.params.id,
+    changeId: id,
     action: decision,
     requestedAt: new Date().toISOString(),
     decidedBy,
