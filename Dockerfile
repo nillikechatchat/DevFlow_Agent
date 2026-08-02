@@ -1,20 +1,18 @@
 # ============================================================
-# AgentTeams-Dashboard - Production Dockerfile (Next.js standalone)
+# AgentTeams-Dashboard - Production Dockerfile (Next.js standalone + issue-spec server)
 # ============================================================
 # Build:
 #   docker build -t agentteams-dashboard:latest .
 # Run:
-#   docker run -p 3000:3000 \
+#   docker run -p 3000:3000 -p 8091:8091 \
 #     -e AGENTTEAMS_CONTROLLER_URL=http://agentteams-controller:8090 \
-#     -e AGENTTEAMS_AI_GATEWAY_ADMIN_URL=http://agentteams-controller:8001 \
-#     -e NEXT_PUBLIC_MATRIX_API_URL=http://matrix-local.agentteams.io:6167 \
 #     agentteams-dashboard:latest
 
 FROM node:20-alpine AS builder
+
 WORKDIR /app
 
 # Default basePath is empty for standalone deployment (served at root).
-# Override at build time with --build-arg NEXT_PUBLIC_BASE_PATH=/dashboard for embedding.
 ARG NEXT_PUBLIC_BASE_PATH=
 ENV NEXT_PUBLIC_BASE_PATH=${NEXT_PUBLIC_BASE_PATH}
 
@@ -28,26 +26,43 @@ RUN sed -i "s|dl-cdn.alpinelinux.org|${APK_MIRROR}|g" /etc/apk/repositories && \
     apk add --no-cache ca-certificates
 
 # Install dependencies (lockfile included for reproducible builds)
-# NOTE: If Docker bridge DNS is broken, build with --network=host to use host networking.
 ARG NPM_REGISTRY=https://registry.npmmirror.com
 COPY package.json package-lock.json ./
 RUN npm config set registry "${NPM_REGISTRY}" && \
     npm ci --no-audit --no-fund --legacy-peer-deps
 
-# Copy source and build
+# Copy source and build Dashboard
 COPY . .
+RUN npm run build
+
+# ============================================================
+# Build issue-spec server
+# ============================================================
+FROM node:20-alpine AS issue-spec-builder
+
+WORKDIR /app/packages/issue-spec-server
+
+ARG APK_MIRROR=mirrors.aliyun.com
+RUN sed -i "s|dl-cdn.alpinelinux.org|${APK_MIRROR}|g" /etc/apk/repositories && \
+    apk add --no-cache ca-certificates
+
+COPY packages/issue-spec-server/package.json packages/issue-spec-server/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+
+COPY packages/issue-spec-server ./
 RUN npm run build
 
 # ============================================================
 # Runtime image
 # ============================================================
 FROM node:20-alpine AS runner
+
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
-# Next.js 15+ standalone server defaults to localhost; bind to all interfaces for LAN access.
 ENV HOSTNAME=0.0.0.0
+ENV ISSUESPEC_SERVER_PORT=8091
 
 ARG APK_MIRROR=mirrors.aliyun.com
 RUN sed -i "s|dl-cdn.alpinelinux.org|${APK_MIRROR}|g" /etc/apk/repositories && \
@@ -56,7 +71,7 @@ RUN sed -i "s|dl-cdn.alpinelinux.org|${APK_MIRROR}|g" /etc/apk/repositories && \
 # Create non-root user and persistent data directory
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs && \
-    mkdir -p /app/db && \
+    mkdir -p /app/db /app/packages/issue-spec-server/data && \
     chown -R nextjs:nodejs /app
 
 # Copy standalone output
@@ -64,8 +79,28 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
+# Copy issue-spec server
+COPY --from=issue-spec-builder --chown=nextjs:nodejs /app/packages/issue-spec-server/dist ./packages/issue-spec-server/dist
+COPY --from=issue-spec-builder --chown=nextjs:nodejs /app/packages/issue-spec-server/package.json ./packages/issue-spec-server/
+COPY --from=issue-spec-builder --chown=nextjs:nodejs /app/packages/issue-spec-server/node_modules ./packages/issue-spec-server/node_modules
+
 USER nextjs
 
-EXPOSE 3000
+EXPOSE 3000 8091
 
-CMD ["node", "server.js"]
+# Create startup script
+RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo 'set -e' >> /app/start.sh && \
+    echo '' >> /app/start.sh && \
+    echo '# Start issue-spec server in background' >> /app/start.sh && \
+    echo 'cd /app/packages/issue-spec-server && node dist/index.js &' >> /app/start.sh && \
+    echo 'ISSUESPEC_PID=$!' >> /app/start.sh && \
+    echo '' >> /app/start.sh && \
+    echo '# Start Dashboard' >> /app/start.sh && \
+    echo 'cd /app && node server.js' >> /app/start.sh && \
+    echo '' >> /app/start.sh && \
+    echo '# Wait for both processes' >> /app/start.sh && \
+    echo 'wait' >> /app/start.sh
+RUN chmod +x /app/start.sh
+
+CMD ["/app/start.sh"]

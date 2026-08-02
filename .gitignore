@@ -60,3 +60,6 @@ mock-issue-spec-server.js
 mock-issue-spec-server.log
 
 # Issue-spec related files
+dist
+node_modules
+data/store.json
