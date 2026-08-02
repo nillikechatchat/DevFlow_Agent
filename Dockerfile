@@ -36,7 +36,7 @@ COPY . .
 RUN cd packages/issue-spec-server && npm run build
 
 # Copy unified entry point (hand-written JS, not from TypeScript)
-COPY packages/issue-spec-server/dist/unified-entry.js packages/issue-spec-server/dist/unified-entry.js
+RUN cp scripts/unified-entry.js packages/issue-spec-server/dist/unified-entry.js
 
 # Build Dashboard
 RUN npm run build
