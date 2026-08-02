@@ -1,15 +1,11 @@
-import { NextRequest } from 'next/server';
-import { getIssueSpecServerUrl, proxyToIssueSpec } from '../../../proxy-helper';
+import { NextResponse } from 'next/server';
+import { storage } from '@/server/issue-spec';
 
 export async function GET(
-  request: NextRequest,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  return proxyToIssueSpec(
-    request,
-    getIssueSpecServerUrl(),
-    `/changes/${encodeURIComponent(id)}/timeline`,
-    { forwardBody: false },
-  );
+  const comments = storage.getComments(id);
+  return NextResponse.json(comments.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()));
 }

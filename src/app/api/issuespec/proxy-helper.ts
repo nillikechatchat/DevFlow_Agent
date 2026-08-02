@@ -1,20 +1,16 @@
 // Shared proxy helper for issue-spec API routes.
-//
-// The issue-spec server address is configured server-side via env and is never
-// taken from user input. Browsers therefore cannot steer the proxy to
-// arbitrary hosts, which is the SSRF prevention boundary for this route group.
+// The issue-spec functionality is now embedded in the Dashboard.
+// This file is kept for backward compatibility.
+
 import { NextRequest, NextResponse } from 'next/server';
 
 const TIMEOUT_MS = 10000;
 
-const DEFAULT_ISSUESPEC_SERVER_URL = 'http://issuespec-server:8091';
+// Issue-spec is now embedded - all routes are handled directly in src/app/api/issuespec/
+// This helper is deprecated and kept for potential future use.
 
 export function getIssueSpecServerUrl(): string {
-  return (
-    process.env.ISSUESPEC_SERVER_URL ||
-    process.env.ISSUESPEC_API_URL ||
-    DEFAULT_ISSUESPEC_SERVER_URL
-  );
+  return process.env.ISSUESPEC_SERVER_URL || 'http://localhost:8091';
 }
 
 export function assertSafeIssueSpecUrl(url: string): void {

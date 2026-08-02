@@ -1,15 +1,10 @@
-import { NextRequest } from 'next/server';
-import { getIssueSpecServerUrl, proxyToIssueSpec } from '../../../proxy-helper';
+import { NextResponse } from 'next/server';
+import { storage } from '@/server/issue-spec';
 
 export async function GET(
-  request: NextRequest,
+  _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  return proxyToIssueSpec(
-    request,
-    getIssueSpecServerUrl(),
-    `/changes/${encodeURIComponent(id)}/tasks`,
-    { forwardBody: false },
-  );
+  return NextResponse.json(storage.getTasks(id));
 }
