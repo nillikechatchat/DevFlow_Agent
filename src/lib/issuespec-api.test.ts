@@ -90,9 +90,9 @@ const mockApproval: ApprovalRecord = {
   decidedAt: '2026-07-31T08:05:00.000Z',
 };
 
-function expectFieldMatch<T extends Record<string, unknown>>(
-  received: T,
-  fixture: Record<string, unknown>,
+function expectFieldMatch(
+  received: any,
+  fixture: any,
   label: string,
 ) {
   for (const key of Object.keys(fixture)) {

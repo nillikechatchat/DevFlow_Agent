@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 import { GET as getChanges } from './changes/route';
 import { GET as getChangeDetail } from './changes/[id]/route';
@@ -21,7 +21,7 @@ const mockGetUrl = vi.mocked(getIssueSpecServerUrl);
 const mockProxy = vi.mocked(proxyToIssueSpec);
 
 const proxyResponse = (body: unknown, status = 200) =>
-  Response.json(body, { status });
+  NextResponse.json(body, { status });
 
 describe('issue-spec API routes', () => {
   beforeEach(() => {
