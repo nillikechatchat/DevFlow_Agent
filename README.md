@@ -77,3 +77,40 @@ DevFlow_Agent 面向需求交付、缺陷修复和持续改进场景，提供从
 ## 仓库
 
 https://github.com/nillikechatchat/DevFlow_Agent
+
+## Issue-Spec Server
+
+项目包含一个独立的 issue-spec server，用于支持 Spec 工作流和变更看板模块。
+
+### 本地启动
+
+```bash
+# 启动 issue-spec server
+bash start-issuespec.sh
+
+# 另一个终端启动 Dashboard
+npm run dev
+```
+
+### API 端点
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/changes` | 变更列表 |
+| GET | `/api/changes/:id` | 变更详情 |
+| GET | `/api/changes/:id/timeline` | typed comment 时间线 |
+| GET | `/api/changes/:id/dag` | PROCESS DAG |
+| GET | `/api/changes/:id/tasks` | 任务列表 |
+| GET | `/api/changes/:id/verify` | verify 结果 |
+| POST | `/api/gateways/verify` | 触发 verify |
+| GET/POST | `/api/changes/:id/approvals` | 审批记录 |
+
+### 健康检查
+
+```bash
+curl http://localhost:8091/health
+```
+
+### 数据持久化
+
+数据存储在 `packages/issue-spec-server/data/store.json`，服务器重启后自动恢复。
