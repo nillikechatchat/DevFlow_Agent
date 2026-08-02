@@ -33,8 +33,8 @@ start_issuespec() {
   info "Starting issue-spec server..."
   cd "$SCRIPT_DIR/packages/issue-spec-server"
   
-  # Start in background
-  npm start > /tmp/issue-spec-server.log 2>&1 &
+  # Start in background with NODE_PATH pointing to root node_modules
+  NODE_PATH="$SCRIPT_DIR/node_modules" npm start > /tmp/issue-spec-server.log 2>&1 &
   ISSUESPEC_PID=$!
   cd "$SCRIPT_DIR"
   
