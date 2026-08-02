@@ -1,8 +1,26 @@
 'use client';
 
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import type { ReactNode } from 'react';
 import { ModelsSection } from './models-section';
+
+const queryClient = new QueryClient();
+
+function makeWrapper() {
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        {children}
+      </QueryClientProvider>
+    );
+  };
+}
+
+vi.mock('@/hooks/use-agentteams-consumers', () => ({
+  useConsumers: () => ({ data: [], isLoading: false, error: null }),
+}));
 
 const mutations = {
   createProvider: vi.fn(),
@@ -64,7 +82,7 @@ describe('ModelsSection', () => {
   });
 
   it('retains provider form input when immediate validation fails', () => {
-    render(<ModelsSection />);
+    render(<ModelsSection />, { wrapper: makeWrapper() });
     fireEvent.click(screen.getByRole('button', { name: '添加提供商' }));
 
     const name = screen.getAllByRole('textbox')[0];
@@ -77,7 +95,7 @@ describe('ModelsSection', () => {
   });
 
   it('keeps invalid fallback JSON visible in the route form', () => {
-    render(<ModelsSection />);
+    render(<ModelsSection />, { wrapper: makeWrapper() });
     fireEvent.click(screen.getByRole('button', { name: '添加路由' }));
 
     const fallback = screen.getByPlaceholderText(/maxRetries/);
@@ -90,7 +108,7 @@ describe('ModelsSection', () => {
   });
 
   it('submits a valid route creation form', () => {
-    render(<ModelsSection />);
+    render(<ModelsSection />, { wrapper: makeWrapper() });
     fireEvent.click(screen.getByRole('button', { name: '添加路由' }));
 
     fireEvent.change(screen.getAllByRole('textbox')[0], { target: { value: 'new-route' } });
@@ -104,7 +122,7 @@ describe('ModelsSection', () => {
   });
 
   it('shows referenced routes before deleting a provider', () => {
-    render(<ModelsSection />);
+    render(<ModelsSection />, { wrapper: makeWrapper() });
     fireEvent.click(screen.getByRole('button', { name: '删除 openai' }));
 
     expect(screen.getByText('以下路由仍引用该提供商：team-chat。删除后这些路由将失效。')).toBeTruthy();
@@ -113,7 +131,7 @@ describe('ModelsSection', () => {
   });
 
   it('submits route edits and confirms route deletion', () => {
-    render(<ModelsSection />);
+    render(<ModelsSection />, { wrapper: makeWrapper() });
     fireEvent.click(screen.getByRole('button', { name: '编辑 team-chat' }));
     fireEvent.click(screen.getByRole('button', { name: '保存修改' }));
     expect(mutations.updateRoute).toHaveBeenCalledWith(expect.objectContaining({ name: 'team-chat' }), expect.any(Object));
@@ -125,7 +143,7 @@ describe('ModelsSection', () => {
   });
 
   it('renders the current request-model binding', () => {
-    render(<ModelsSection />);
+    render(<ModelsSection />, { wrapper: makeWrapper() });
 
     expect(screen.getByText('请求模型别名绑定')).toBeTruthy();
     expect(screen.getByText('gpt-4.1')).toBeTruthy();
