@@ -38,6 +38,9 @@ RUN cd packages/issue-spec-server && npm run build
 # Build Dashboard
 RUN npm run build
 
+# Copy unified entry point
+RUN cp packages/issue-spec-server/dist/unified-entry.js .next/standalone/packages/issue-spec-server/dist/ 2>/dev/null || true
+
 # ============================================================
 # Runtime image
 # ============================================================
