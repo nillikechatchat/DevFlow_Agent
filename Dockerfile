@@ -61,6 +61,9 @@ RUN sed -i "s|dl-cdn.alpinelinux.org|${APK_MIRROR}|g" /etc/apk/repositories && \
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
+# Install bash for startup script
+RUN apk add --no-cache bash
+
 # Copy all dependencies and built files
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./
@@ -74,4 +77,4 @@ USER nextjs
 
 EXPOSE 3000 8091
 
-CMD ["bash", "start-dashboard.sh", "build"]
+CMD ["./start-dashboard.sh", "build"]
