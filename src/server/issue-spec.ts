@@ -1,9 +1,6 @@
 // Issue-Spec Server Module
 // Can be used as standalone server (port 8091) or embedded
 
-import express from 'express';
-import cors from 'cors';
-import type { Request, Response } from 'express';
 import type { ApprovalDecision, ChangeSummary, TypedComment, ProcessDag, TaskItem, VerifyResult, ApprovalRecord, StoreData } from './types.js';
 
 // ============ Types ============
@@ -204,17 +201,21 @@ export const storage = new Storage();
 // ============ Standalone Server ============
 
 export function createIssueSpecServer(port: number = 8091) {
+  // Dynamic import to avoid bundling express in Next.js
+  const { default: express } = require('express') as typeof import('express');
+  const { default: cors } = require('cors') as typeof import('cors');
+  
   const app = express();
   
   app.use(cors());
   app.use(express.json());
   
   // Routes
-  app.get('/api/changes', (_req: Request, res: Response) => {
+  app.get('/api/changes', (_req: any, res: any) => {
     res.json(storage.listChanges());
   });
   
-  app.get('/api/changes/:id', (req: Request, res: Response) => {
+  app.get('/api/changes/:id', (req: any, res: any) => {
     const change = storage.getChange(req.params.id);
     if (!change) {
       res.status(404).json({ error: 'Change not found' });
@@ -224,12 +225,12 @@ export function createIssueSpecServer(port: number = 8091) {
     res.json({ ...change, comments });
   });
   
-  app.get('/api/changes/:id/timeline', (req: Request, res: Response) => {
+  app.get('/api/changes/:id/timeline', (req: any, res: any) => {
     const comments = storage.getComments(req.params.id);
     res.json(comments.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()));
   });
   
-  app.get('/api/changes/:id/dag', (req: Request, res: Response) => {
+  app.get('/api/changes/:id/dag', (req: any, res: any) => {
     const dag = storage.getDag(req.params.id);
     if (!dag) {
       res.status(404).json({ error: 'DAG not found' });
@@ -238,11 +239,11 @@ export function createIssueSpecServer(port: number = 8091) {
     res.json(dag);
   });
   
-  app.get('/api/changes/:id/tasks', (req: Request, res: Response) => {
+  app.get('/api/changes/:id/tasks', (req: any, res: any) => {
     res.json(storage.getTasks(req.params.id));
   });
   
-  app.get('/api/changes/:id/verify', (req: Request, res: Response) => {
+  app.get('/api/changes/:id/verify', (req: any, res: any) => {
     const result = storage.getVerify(req.params.id);
     if (!result) {
       res.status(404).json({ error: 'Verify result not found' });
@@ -251,7 +252,7 @@ export function createIssueSpecServer(port: number = 8091) {
     res.json(result);
   });
   
-  app.post('/api/gateways/verify', (req: Request, res: Response) => {
+  app.post('/api/gateways/verify', (req: any, res: any) => {
     const { changeId } = req.body as { changeId: string };
     if (!changeId) {
       res.status(400).json({ error: 'changeId is required' });
@@ -270,11 +271,11 @@ export function createIssueSpecServer(port: number = 8091) {
     res.json(result);
   });
   
-  app.get('/api/changes/:id/approvals', (req: Request, res: Response) => {
+  app.get('/api/changes/:id/approvals', (req: any, res: any) => {
     res.json(storage.getApprovals(req.params.id));
   });
   
-  app.post('/api/changes/:id/approvals', (req: Request, res: Response) => {
+  app.post('/api/changes/:id/approvals', (req: any, res: any) => {
     const { decision, reason, decidedBy } = req.body as {
       decision: ApprovalDecision;
       reason?: string;
@@ -298,7 +299,7 @@ export function createIssueSpecServer(port: number = 8091) {
     res.json(approval);
   });
   
-  app.get('/health', (_req: Request, res: Response) => {
+  app.get('/health', (_req: any, res: any) => {
     res.json({ status: 'ok', service: 'issue-spec-server', timestamp: new Date().toISOString() });
   });
   
