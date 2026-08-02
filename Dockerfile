@@ -1,13 +1,11 @@
 # ============================================================
 # AgentTeams-Dashboard - Production Dockerfile
-# Issue-spec server runs as separate container on port 8091
+# Issue-spec server is embedded and starts with Dashboard
 # ============================================================
 # Build:
 #   docker build -t agentteams-dashboard:latest .
 # Run:
-#   docker run -d -p 3000:3000 \
-#     -e ISSUESPEC_SERVER_URL=http://host.docker.internal:8091 \
-#     agentteams-dashboard:latest
+#   docker run -d -p 3000:3000 -p 8091:8091 agentteams-dashboard:latest
 
 FROM node:20-alpine AS builder
 
@@ -23,7 +21,7 @@ ENV NEXT_PUBLIC_AGENTTEAMS_CONTROLLER_URL=${NEXT_PUBLIC_AGENTTEAMS_CONTROLLER_UR
 # Install native deps
 ARG APK_MIRROR=mirrors.aliyun.com
 RUN sed -i "s|dl-cdn.alpinelinux.org|${APK_MIRROR}|g" /etc/apk/repositories && \
-    apk add --no-cache ca-certificates
+    apk add --no-cache ca-certificates curl
 
 # Install all dependencies
 ARG NPM_REGISTRY=https://registry.npmmirror.com
@@ -33,6 +31,11 @@ RUN npm config set registry "${NPM_REGISTRY}" && \
 
 # Copy source and build
 COPY . .
+
+# Build issue-spec server first
+RUN cd packages/issue-spec-server && npm run build
+
+# Build Dashboard
 RUN npm run build
 
 # ============================================================
@@ -45,22 +48,27 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+ENV ISSUESPEC_SERVER_PORT=8091
 
 ARG APK_MIRROR=mirrors.aliyun.com
 RUN sed -i "s|dl-cdn.alpinelinux.org|${APK_MIRROR}|g" /etc/apk/repositories && \
-    apk add --no-cache ca-certificates
+    apk add --no-cache ca-certificates curl
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy standalone output
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Copy all dependencies and built files
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/package.json ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/packages/issue-spec-server ./packages/issue-spec-server
+COPY --from=builder --chown=nextjs:nodejs /app/start-dashboard.sh ./
+COPY --from=builder --chown=nextjs:nodejs /app/next.config.ts ./
 
 USER nextjs
 
-EXPOSE 3000
+EXPOSE 3000 8091
 
-CMD ["node", "server.js"]
+CMD ["bash", "start-dashboard.sh", "build"]

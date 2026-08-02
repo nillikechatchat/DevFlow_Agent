@@ -16,6 +16,7 @@ ok()    { echo -e "${GREEN}[OK]${NC}    $*"; }
 warn()  { echo -e "${YELLOW}[WARN]${NC}  $*"; }
 
 ISSUESPEC_PID=""
+DASHBOARD_PID=""
 
 # Check prerequisites
 check_prerequisites() {
@@ -84,13 +85,21 @@ case "$MODE" in
     check_prerequisites
     
     info "Building project..."
+    npm run build:issuespec
     npm run build
     
     info "Starting production servers..."
+    
+    # Set env
+    export ISSUESPEC_SERVER_PORT=8091
+    export PORT=3000
+    export ISSUESPEC_SERVER_URL=http://localhost:8091
+    
+    # Start issue-spec server in background
     start_issuespec
     
-    # Set env and start
-    export ISSUESPEC_SERVER_URL=http://localhost:8091
+    # Start Dashboard
+    info "Starting Dashboard..."
     npm start
     ;;
   *)
