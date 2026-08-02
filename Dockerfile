@@ -35,10 +35,13 @@ COPY . .
 # Build issue-spec server first
 RUN cd packages/issue-spec-server && npm run build
 
+# Copy unified entry point (hand-written, not from TypeScript)
+RUN cp packages/issue-spec-server/dist/unified-entry.js packages/issue-spec-server/dist/unified-entry.js
+
 # Build Dashboard
 RUN npm run build
 
-# Copy unified entry point
+# Copy unified entry point to standalone
 RUN cp packages/issue-spec-server/dist/unified-entry.js .next/standalone/packages/issue-spec-server/dist/ 2>/dev/null || true
 
 # ============================================================
