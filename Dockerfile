@@ -75,6 +75,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/packages/issue-spec-server ./packages/issue-spec-server
 COPY --from=builder --chown=nextjs:nodejs /app/start-dashboard.sh ./
 COPY --from=builder --chown=nextjs:nodejs /app/next.config.ts ./
+COPY --from=builder --chown=nextjs:nodejs /app/scripts ./scripts
 
 USER nextjs
 

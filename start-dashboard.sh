@@ -65,7 +65,12 @@ case "$MODE" in
     info "  Issue-spec:   http://localhost:8091"
     info "  API proxy:    http://localhost:3000/api/issuespec"
     
-    # Run unified entry point
+    # Run unified entry point (ensure dist is present)
+    if [ ! -f "packages/issue-spec-server/dist/unified-entry.js" ]; then
+      info "Copying unified-entry.js to dist..."
+      cp scripts/unified-entry.js packages/issue-spec-server/dist/ 2>/dev/null || true
+    fi
+    
     ISSUESPEC_SERVER_PORT=8091 PORT=3000 node packages/issue-spec-server/dist/unified-entry.js
     ;;
   *)
