@@ -11,6 +11,7 @@ import {
   Users,
   Lock,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -403,8 +404,12 @@ export function ChatPanel({ room }: { room: RoomInfo }) {
   // File upload handler
   const handleFileUpload = useCallback(
     async (file: File) => {
-      if (!userId) return;
+      if (!userId) {
+        toast.error('请先登录 Matrix 账号后再上传文件');
+        return;
+      }
       try {
+        toast.loading('正在上传文件...');
         const result = await uploadMedia.mutateAsync({ roomId: room.id, file });
         const contentUri = result.content_uri;
         const isImage = file.type.startsWith('image/');
@@ -416,8 +421,12 @@ export function ChatPanel({ room }: { room: RoomInfo }) {
           formattedBody: undefined,
           extra: { msgtype, url: contentUri, info: { mimetype: file.type, size: file.size } },
         });
-      } catch {
-        // Error handled by mutation state
+        toast.dismiss();
+        toast.success('文件上传成功');
+      } catch (err) {
+        toast.dismiss();
+        const message = err instanceof Error ? err.message : '上传失败';
+        toast.error(message);
       }
     },
     [room.id, uploadMedia, sendMessage, userId]
